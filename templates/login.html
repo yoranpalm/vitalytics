@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#fafbfe" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#11141a" media="(prefers-color-scheme: dark)">
+  <title>Inloggen · Vitalytics</title>
+  <link rel="icon" href="/static/icons/icon-192.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=95">
+</head>
+<body class="login-body">
+  <main class="login-kaart">
+    <div class="login-logo">
+      <svg width="40" height="40" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="var(--primary-container)"/><path d="M9.5 9.5L17 24.5L24.5 9.5" fill="none" stroke="var(--on-primary-container)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h1>Vitalytics</h1>
+    {% if geen_gebruikers %}<p class="login-hint">Maak je eerste account om de app te beveiligen.</p>{% endif %}
+    {% if fout %}<p class="login-fout">{{ fout }}</p>{% endif %}
+    <form method="post" action="/login">
+      <label class="field">
+        <span class="field-box">
+          <input name="gebruiker" autocomplete="username" required placeholder=" ">
+          <span class="flabel">Gebruikersnaam</span>
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-box">
+          <input name="wachtwoord" type="password" autocomplete="current-password" required placeholder=" ">
+          <span class="flabel">Wachtwoord</span>
+        </span>
+      </label>
+      <button class="btn" type="submit">{% if geen_gebruikers %}Account aanmaken &amp; inloggen{% else %}Inloggen{% endif %}</button>
+    </form>
+    <p class="login-hint">Lokale gezondheidscoach — alle data blijft op deze machine.</p>
+  </main>
+</body>
+</html>

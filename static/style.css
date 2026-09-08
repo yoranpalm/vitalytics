@@ -1,0 +1,1315 @@
+/* ==========================================================================
+   Vitalytics — Material Design 3 (desktop-first)
+   - Navigation drawer (256px) / compacte rail (80px) onder 1024px
+   - 12-koloms grid, gevulde tekstvelden, design-tokens voor alles
+   ========================================================================== */
+
+:root {
+  /* kleur — licht (M3-tonen rond merkblauw #3A5FC8) */
+  --primary: #3a5fc8;
+  --on-primary: #ffffff;
+  --primary-container: #dbe2ff;
+  --on-primary-container: #00174a;
+  --secondary-container: #e2e6f6;
+  --on-secondary-container: #12172b;
+  --tertiary: #1f6d38;
+  --tertiary-container: #a8f2bd;
+  --on-tertiary-container: #00210e;
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error-container: #410002;
+
+  --surface: #fafbfe;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f2f3fa;
+  --surface-container: #eceef5;
+  --surface-container-high: #e6e8f0;
+  --surface-container-highest: #e0e3eb;
+  --on-surface: #191c22;
+  --on-surface-variant: #43474e;
+  --outline: #73777f;
+  --outline-variant: #c4c6d0;
+  --inverse-surface: #2e3036;
+  --inverse-on-surface: #f0f0f7;
+
+  --card-bg: var(--surface-container-lowest);
+  --drawer-bg: var(--surface-container-low);
+  --field-bg: var(--surface-container-highest);
+
+  /* vorm */
+  --radius-xs: 8px;
+  --radius-s: 12px;
+  --radius-m: 16px;
+  --radius-full: 999px;
+
+  /* spacing — 4pt-raster */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-16: 64px;
+
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-40: 40px;
+
+  --state-hover: rgba(128, 128, 128, 0.14);
+  --danger-soft: rgba(186, 26, 26, 0.08);
+  --danger-border: rgba(186, 26, 26, 0.35);
+
+  /* maten */
+  --drawer-w: 256px;
+  --field-h: 56px;
+  --btn-h: 40px;
+  --content-max: 1360px;
+
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.30), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --elev-2: 0 1px 2px rgba(0, 0, 0, 0.30), 0 3px 6px 1px rgba(0, 0, 0, 0.15);
+  --elev-3: 0 1px 3px rgba(0, 0, 0, 0.30), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+  /* status-iconen (mask: de kleur volgt currentColor) */
+  --icoon-ok: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM7.5 11.9l3.1 3.1 5.7-5.7 1.4 1.4-7.1 7.1-4.5-4.5 1.4-1.4Z'/%3E%3C/svg%3E");
+  --icoon-fout: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM11 6.5h2V13h-2Zm0 8.5h2v2h-2Z'/%3E%3C/svg%3E");
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #a7c5ff;
+    --on-primary: #002f63;
+    --primary-container: #0b4a8f;
+    --on-primary-container: #d9e2ff;
+    --secondary-container: #3d4655;
+    --on-secondary-container: #dae2ff;
+    --tertiary: #8bd8a3;
+    --tertiary-container: #00522a;
+    --on-tertiary-container: #a6f2bd;
+    --error: #ffb4ab;
+    --error-container: #93000a;
+    --on-error-container: #ffdad6;
+
+    --surface: #11141a;
+    --surface-container-lowest: #0b0e13;
+    --surface-container-low: #181c23;
+    --surface-container: #1c2028;
+    --surface-container-high: #262a33;
+    --surface-container-highest: #31353f;
+    --on-surface: #e2e2e9;
+    --on-surface-variant: #c4c6d0;
+    --outline: #8e9199;
+    --outline-variant: #43474e;
+    --inverse-surface: #e2e2e9;
+    --inverse-on-surface: #2e3036;
+
+    --card-bg: var(--surface-container);
+    --drawer-bg: #0d1015;
+    --field-bg: var(--surface-container-highest);
+  }
+}
+
+/* -- reset & basis -- */
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: "Google Sans", "Google Sans Text", "Outfit", system-ui,
+               -apple-system, "Segoe UI", sans-serif;
+  font-size: var(--fs-14);
+  line-height: 20px;
+  color: var(--on-surface);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+a { color: var(--primary); text-decoration: none; }
+p { margin: 0 0 var(--sp-2); }
+p:last-child { margin-bottom: 0; }
+code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+/* -- demo-modus (account 'demo'): alleen bekijken --
+   De server weigert alle mutaties (403); dit is de zichtbare kant: knoppen
+   zijn inert en gedimd, velden tonen de data maar zijn niet te bewerken,
+   navigatie-links (drawer, weekwisselaar, export) blijven gewoon werken. */
+.demo button { pointer-events: none; opacity: .55; }
+.demo input, .demo select, .demo textarea { pointer-events: none; opacity: .65; }
+
+/* -- typografie -- */
+.headline { margin: 0; font-size: var(--fs-24); line-height: 32px; font-weight: 500; }
+.page-sub { margin: var(--sp-1) 0 0; color: var(--on-surface-variant); }
+.card-title { margin: 0 0 var(--sp-3); font-size: var(--fs-16); line-height: 24px; font-weight: 500; }
+.sub-title {
+  margin: var(--sp-4) 0 var(--sp-1);
+  font-size: var(--fs-14);
+  font-weight: 500;
+  color: var(--on-surface-variant);
+}
+.hint { margin: var(--sp-2) 0 0; font-size: var(--fs-12); line-height: 16px; color: var(--on-surface-variant); }
+.hint.card-intro { margin: 0 0 var(--sp-4); }
+
+/* -- instellingen: consistent verticaal ritme binnen kaarten --
+   Een hint die tussen formuliervelden staat krijgt boven + onder evenveel
+   ruimte als de rastergap; na knoppenrijen 12px in plaats van 8px. */
+.form-grid + .hint.card-intro,
+.field + .hint.card-intro { margin-top: var(--sp-4); }
+form.card .card-actions ~ .hint { margin-top: var(--sp-3); }
+/* Gebruikers & inloggen: meer ademruimte na de account-lijst (zodra er
+   gebruikers in staan); de afstand veld-r-knop blijft het vaste ritme */
+#users-lijst:not(:empty) { margin-bottom: var(--sp-4); }
+.status-line { margin-bottom: var(--sp-4); }
+
+/* -- layout: drawer + hoofdgebied -- */
+.drawer {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  z-index: 30;
+  width: var(--drawer-w);
+  padding: var(--sp-4) var(--sp-3);
+  background: var(--drawer-bg);
+  display: flex;
+  flex-direction: column;
+}
+.drawer-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3) var(--sp-4);
+  color: var(--on-surface);
+}
+.brand-text { display: flex; flex-direction: column; line-height: 20px; }
+.brand-text b { font-size: var(--fs-16); font-weight: 600; }
+.brand-text span { font-size: var(--fs-12); color: var(--on-surface-variant); }
+
+.drawer-nav { display: flex; flex-direction: column; gap: var(--sp-1); }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: 56px;
+  padding: 0 var(--sp-4);
+  border-radius: var(--radius-full);
+  color: var(--on-surface-variant);
+  font-size: var(--fs-14);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  transition: background 0.15s;
+}
+.nav-item:hover { background: var(--state-hover); }
+.nav-item.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.nav-icon { display: grid; place-items: center; width: 24px; height: 24px; flex: none; }
+
+.drawer-foot {
+  margin-top: auto;
+  padding: var(--sp-4) var(--sp-2) 0;
+  border-top: 1px solid var(--outline-variant);
+}
+.foot-title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-11);
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+.foot-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-12);
+  color: var(--on-surface-variant);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.dot.ok { background: var(--tertiary); }
+.dot.err { background: var(--error); }
+
+.main { margin-left: var(--drawer-w); min-height: 100vh; }
+.page {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--sp-8) var(--sp-10) var(--sp-16);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-6);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-6);
+}
+.header-actions { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+/* status-regel onder de paginakop (dashboard): groen dotje + tijdstip */
+.sync-info { display: flex; align-items: center; gap: var(--sp-2); }
+
+/* -- 12-koloms grid (desktop-first, gedeeltelijke fallbacks) -- */
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--sp-4); }
+.grid > .card { margin-bottom: 0; }
+/* gestapelde layoutblokken: consistente sectiescheiding */
+.grid + .grid, .grid + .row-2, .row-2 + .grid { margin-top: var(--sp-6); }
+
+.col-2 { grid-column: span 2; }
+.col-3 { grid-column: span 3; }
+.col-4 { grid-column: span 4; }
+.col-5 { grid-column: span 5; }
+.col-6 { grid-column: span 6; }
+.col-7 { grid-column: span 7; }
+.col-8 { grid-column: span 8; }
+.col-12 { grid-column: span 12; }
+@media (max-width: 899px) {
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .col-2, .col-3 { grid-column: span 2; }
+  .col-4, .col-5, .col-6, .col-7, .col-8, .col-12 { grid-column: span 4; }
+}
+@media (max-width: 559px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
+  .grid > * { grid-column: 1 / -1; }
+  .grid > .metric { grid-column: span 1; }
+}
+
+@media (max-width: 1023px) {
+  :root { --drawer-w: 80px; }
+  .drawer { padding: var(--sp-4) var(--sp-2); align-items: center; }
+  .drawer-brand { padding: var(--sp-2) 0 var(--sp-4); }
+  .brand-text, .nav-label, .drawer-foot { display: none; }
+  .nav-item { width: 56px; height: 56px; justify-content: center; padding: 0; }
+  .page { padding: var(--sp-6) var(--sp-6) var(--sp-8); }
+}
+
+/* -- cards -- */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius-s);
+  padding: var(--sp-5);
+  margin-bottom: var(--sp-4);
+}
+.grid .card { margin-bottom: 0; }
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+.card-head .card-title { margin: 0; }
+.card.empty { text-align: center; padding: var(--sp-8) var(--sp-6); }
+.card.latest { box-shadow: inset 0 0 0 1.5px var(--primary); }
+/* lege "Laatste advies"-kaart: de genereer-knop staat in de koprij (op de
+   hoogte van "Bewerken" naast deze kaart); de hint begint op de hoogte van de
+   maaltijdrijen ernaast */
+.advice-hint { margin-top: var(--sp-4); }
+.danger-zone { border: 1px solid var(--danger-border); background: var(--danger-soft); }
+.sticky { position: sticky; top: var(--sp-6); align-self: start; }
+
+/* -- accordion voor oudere adviezen -- */
+/* uitleg binnen adviezen (waarom, notitie, basis-regel) is inhoudelijke tekst:
+   leesbaar 14px i.p.v. de 12px hint-grootte */
+.advice-col .hint { font-size: var(--fs-14); line-height: 20px; }
+.accordion { padding: 0; overflow: hidden; }
+.accordion summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); }
+.accordion summary::-webkit-details-marker { display: none; }
+.acc-title { font-weight: 500; font-size: var(--fs-16); flex: none; }
+.acc-meta {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-12);
+  color: var(--on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.accordion .chev { flex: none; color: var(--on-surface-variant); transition: transform 0.2s; }
+.accordion[open] .chev { transform: rotate(180deg); }
+/* verwijderknop naast de bronchip in de advieskop */
+.advice-actions { display: flex; align-items: center; gap: var(--sp-2); flex: none; }
+.accordion .del-advice { flex: none; }
+.acc-body { padding: var(--sp-4) var(--sp-5) var(--sp-5); }
+.basis-line { margin-top: var(--sp-4); padding-top: var(--sp-3); border-top: 1px solid var(--outline-variant); }
+.science { list-style: none; margin: var(--sp-2) 0 0; padding: 0; }
+.science li {
+  margin: var(--sp-2) 0 0;
+  padding: var(--sp-2) 0 var(--sp-2) var(--sp-3);
+  border-left: 2px solid var(--primary);
+  font-size: var(--fs-14);
+  line-height: 20px;
+}
+
+/* Dag-accordions op Maaltijden staan als kaart ín het raster; .grid .card zet
+   hun marge op 0 — herstel de tussenruimte zoals tussen de kaarten op Advies. */
+.grid .accordion { margin-bottom: var(--sp-4); }
+
+/* -- maaltijden -- */
+/* totalen (aantal · kcal) rechts uitgelijnd in de dagkop, direct links van het
+   uitklap-pijltje. Volledige flex-shorthand nodig: de basis .acc-meta heeft
+   flex: 1 (flex-basis 0%) — met alleen flex-grow: 0 inklapt de meta naar
+   0 px breedte en verdwijnen de totalen. */
+#meals-day-list .acc-meta { flex: 0 1 auto; margin-left: auto; }
+
+/* invoerwijze: handmatig of AI-schatting (M3 segmented buttons) */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin: 0 0 var(--sp-4);
+}
+.seg-btn {
+  height: 40px;
+  padding: 0 var(--sp-5);
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-14);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.seg-btn + .seg-btn { border-left: 1px solid var(--outline-variant); }
+.seg-btn:hover { background: var(--state-hover); }
+.seg-btn.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.seg-btn.active:hover { background: var(--secondary-container); }
+
+/* in de AI-modus alleen Dag + AI-invoer; de handmatige velden verschijnen
+   weer zodra er een schatting is ingevuld (setMode in app.js) */
+.meal-ai { display: none; }
+#meal-form.mode-ai .meal-ai { display: block; }
+#meal-form.mode-ai .manual-field { display: none; }
+#meal-form.mode-ai .field-dag { grid-column: 1 / -1; }
+
+/* -- activiteiten -- */
+.act-head { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+.act-sport { margin: 0; font-size: var(--fs-14); line-height: 18px; font-weight: 500; }
+.act-datum { margin: 2px 0 0; font-size: var(--fs-12); line-height: 16px; color: var(--on-surface-variant); }
+.act-emoji {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.act-emoji svg { width: 24px; height: 24px; display: block; }
+.act-chips { display: flex; align-items: center; gap: var(--sp-2); flex: none; flex-wrap: wrap; justify-content: flex-end; }
+.verdict {
+  margin: var(--sp-4) 0 0;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+  border-radius: var(--radius-xs);
+  font-weight: 500;
+}
+.analysis-title {
+  margin: var(--sp-4) 0 0;
+  font-size: var(--fs-11);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+.analysis { list-style: none; margin: var(--sp-2) 0 0; padding: 0; }
+.analysis li {
+  display: flex;
+  gap: var(--sp-4);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--outline-variant);
+  font-size: var(--fs-14);
+  line-height: 20px;
+}
+.analysis li:last-child { border-bottom: 0; padding-bottom: 0; }
+.analysis .a-label { flex: none; width: 110px; font-weight: 500; color: var(--on-surface-variant); }
+.analysis .a-text { flex: 1; min-width: 0; }
+
+/* spiergroep-visualisatie in het activiteit-detail: gewone rij in de
+   contentkolom — zelfde linkerlijn als het badge-icoon, de stats en het
+   eindoordeel (geen gevulde band met extra inset, dus alles blijft
+   precies uitgelijnd) */
+.spieren-blok {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin: var(--sp-3) 0;
+}
+.spieren-figuur { width: 27px; height: 64px; flex: none; }
+.spieren-figuur .sp { fill: var(--surface-container-high); }
+.spieren-figuur .aan { fill: var(--primary); }
+.spieren-label {
+  margin: 0;
+  font-size: var(--fs-11);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+.spieren-groepen { margin: var(--sp-1) 0 0; font-size: var(--fs-16); line-height: 22px; font-weight: 500; }
+/* stats als label/waarde-rijen — zelfde ritme als de lijstinhoud ernaast;
+   labels op de contentkolom, waarden rechts op de kolom van "Alles"/kruisje */
+.act-stats { list-style: none; margin: var(--sp-2) 0 0; padding: 0; }
+.act-stats li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-1) 0;
+  border-bottom: 1px solid var(--outline-variant);
+}
+.act-stats li:last-child { border-bottom: 0; }
+.act-stats span { font-size: var(--fs-12); color: var(--on-surface-variant); }
+.act-stats strong { font-size: var(--fs-14); font-weight: 500; }
+/* de drie onderste dashboard-kaarten: gelijke ruimte onder de kop (16px),
+   ongeacht wat het eerste content-element is (badge-rij, lijst of readiness) */
+.dash-card .card-head { margin-bottom: var(--sp-4); }
+/* de eerste maaltijdrij zonder boven-padding, zodat de inhoud van "Vandaag
+   gegeten" op dezelfde hoogte begint als de buurkaarten */
+.dash-card .list-item:first-child { padding-top: 0; }
+/* in de smalle dashboard-kaart (col-3) past de groepen-tekst op 16px niet naast
+   het poppetje — daar leest 14px beter in verhouding */
+.last-act .spieren-groepen { font-size: var(--fs-14); line-height: 20px; }
+
+/* -- activiteitenlijst (klikbare rijen) -- */
+.act-overview { margin-top: var(--sp-6); }
+.act-list { gap: var(--sp-2); }
+.act-row { border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.act-row .list-head, .act-row .list-sub { display: block; }
+.act-row .chev { color: var(--on-surface-variant); flex: none; }
+
+/* -- detailvenster (native <dialog>) -- */
+.modal {
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  border: 0;
+  border-radius: var(--radius-m);
+  background: var(--card-bg);
+  color: var(--on-surface);
+  padding: var(--sp-6);
+  box-shadow: var(--elev-1);
+}
+.modal::backdrop { background: rgba(0, 0, 0, 0.45); }
+.modal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.modal-title { margin: 0; font-size: var(--fs-20); font-weight: 500; }
+/* popup: gelijkmatige 16px-ritme tussen kop, stats, spiergroep en oordeel */
+.modal .card-head { margin-bottom: var(--sp-4); }
+.modal .stat-grid { margin-top: var(--sp-4); }
+.modal .spieren-blok { margin: var(--sp-4) 0; }
+
+.metric-label { margin: 0; font-size: var(--fs-14); font-weight: 500; color: var(--on-surface-variant); }
+.metric-value { margin: var(--sp-1) 0 0; font-size: var(--fs-24); font-weight: 500; line-height: 32px; }
+.metric-unit { font-size: var(--fs-12); font-weight: 400; color: var(--on-surface-variant); }
+
+/* -- knoppen (M3: filled / tonal / text / icon) -- */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: var(--btn-h);
+  padding: 0 var(--sp-6);
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-family: inherit;
+  font-size: var(--fs-14);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  cursor: pointer;
+  transition: filter 0.15s, box-shadow 0.15s, transform 0.05s;
+}
+.btn:hover { filter: brightness(1.08); box-shadow: var(--elev-1); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; transform: none; }
+.btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn.danger {
+  background: transparent;
+  border: 1px solid var(--error);
+  color: var(--error);
+  padding: 0 calc(var(--sp-6) - 1px);
+}
+.btn.danger:hover {
+  filter: none;
+  box-shadow: none;
+  background: var(--danger-soft);
+  border-color: var(--error);
+}
+.btn.small { height: 32px; padding: 0 var(--sp-4); font-size: var(--fs-14); }
+.btn.text { background: transparent; color: var(--primary); padding: 0 var(--sp-3); box-shadow: none; }
+.btn.text:hover { filter: none; box-shadow: none; background: var(--state-hover); }
+
+.icon-btn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--on-surface-variant);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.icon-btn:hover { background: var(--state-hover); }
+
+/* -- chips -- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface-variant);
+  font-size: var(--fs-12);
+  font-weight: 500;
+}
+.chip.tonal { background: var(--secondary-container); color: var(--on-secondary-container); border-color: transparent; }
+.chip.ok { background: var(--tertiary-container); color: var(--on-tertiary-container); border-color: transparent; }
+.chip.err { background: var(--error-container); color: var(--on-error-container); border-color: transparent; }
+/* losse chip onderaan een kaart (bv. adviesbron): ademruimte bovenin */
+.card > .chip:last-child { margin-top: var(--sp-4); }
+
+/* -- tekstvelden (zachte pill: waarde gecentreerd, label op de rand) -- */
+.field { display: block; }
+.field-box {
+  position: relative;
+  display: block;
+  height: 48px;
+  background: var(--field-bg);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-full);
+  transition: border-color 0.15s;
+}
+.field-box:focus-within { border-color: var(--primary); }
+.field-box input, .field-box select {
+  width: 100%;
+  height: 100%;
+  padding: 0 16px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--on-surface);
+  font-family: inherit;
+  font-size: var(--fs-16);
+}
+.field-box .flabel {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--on-surface-variant);
+  font-size: var(--fs-16);
+  pointer-events: none;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: calc(100% - 32px);
+}
+.field-box input:focus ~ .flabel,
+.field-box input:not(:placeholder-shown) ~ .flabel,
+.field-box select ~ .flabel {
+  top: 0;
+  transform: translateY(-50%);
+  left: 12px;
+  padding: 0 6px;
+  background: var(--card-bg);
+  border-radius: var(--radius-full);
+  font-size: var(--fs-12);
+  letter-spacing: 0.2px;
+  max-width: none;
+}
+.field-box input:focus ~ .flabel { color: var(--primary); font-weight: 500; }
+.field-box select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: var(--sp-10);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238e9199' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+.w-full { grid-column: 1 / -1; }
+@media (max-width: 559px) { .form-grid { grid-template-columns: 1fr; } }
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-top: var(--sp-4);
+}
+.card-actions .hint { margin-top: 0; }
+.mfa-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.mfa-row .field { width: 220px; }
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin: var(--sp-4) 0 0;
+}
+.file-row .hint { margin-top: 0; } /* status/filenaam verticaal gecentreerd naast de knop */
+input[type="file"][hidden] { display: none; }
+/* AI-modus: omschrijving op volle breedte met de knop eronder, en de foto
+   als duidelijk aparte methode met eigen sectietitel — uniforme 12px-ritme */
+.meal-ai .sub-title { margin: var(--sp-3) 0; }
+.meal-ai .card-actions { margin-top: var(--sp-3); }
+.meal-ai .file-row { margin-top: var(--sp-3); }
+.meal-ai > .hint { margin-top: var(--sp-3); }
+
+/* meerregelig omschrijvingsveld (AI-modus) — voorbeeldtekst als placeholder */
+.field-box.field-area {
+  height: auto;
+  border-radius: var(--radius-s);
+  padding: var(--sp-2) var(--sp-4);
+}
+.field-box.field-area textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: var(--sp-2) 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--on-surface);
+  font-family: inherit;
+  font-size: var(--fs-16);
+  line-height: 22px;
+  resize: vertical;
+}
+.field-box.field-area textarea::placeholder { color: var(--on-surface-variant); }
+.preview:not(:empty) { margin-top: var(--sp-4); }
+.preview img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: var(--radius-s);
+  display: block;
+}
+
+/* -- lijsten (M3, hover in plaats van scheidingslijnen) --
+   De negatieve marge zit op de items (niet de container), zodat de
+   hover-achtergrond doorloopt maar tekst altijd op de card-padding staat. */
+.list { display: flex; flex-direction: column; }
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  margin: 0 calc(var(--sp-3) * -1);
+  border-radius: var(--radius-s);
+  transition: background 0.15s;
+}
+.list-item:hover { background: var(--surface-container); }
+.list-thumb {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-container-high);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: var(--fs-16);
+  color: var(--primary);
+}
+.list-thumb svg { width: 24px; height: 24px; display: block; }
+.list-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.list-text { flex: 1; min-width: 0; }
+.list-head { font-size: var(--fs-16); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-sub { font-size: var(--fs-12); color: var(--on-surface-variant); margin-top: var(--sp-1); }
+.list-total {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  border-top: 1px solid var(--outline-variant);
+  margin-top: var(--sp-2);
+  padding: var(--sp-3) 0 0;
+  font-size: var(--fs-14);
+  font-weight: 500;
+}
+
+/* -- readyheid & cijfers -- */
+.readiness { display: flex; align-items: baseline; gap: var(--sp-2); margin-top: var(--sp-1); }
+.readiness .num { font-size: var(--fs-40); font-weight: 500; line-height: 1.1; }
+.readiness .den { font-size: var(--fs-14); color: var(--on-surface-variant); }
+.progress {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-highest);
+  overflow: hidden;
+  margin: var(--sp-2) 0;
+}
+.progress > span { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+/* stats die exact op de tekstkolom moeten uitkomen (popup + dashboard-blok):
+   de linker tegel-padding compenseren zodat de duur-waarde op de titelkolom
+   staat en de laatste tegel aansluit op het groene blok / kruisje / chips */
+.stat-flush { margin-left: calc(var(--sp-3) * -1); }
+.stat {
+  background: var(--surface-container);
+  border-radius: var(--radius-xs);
+  padding: var(--sp-2) var(--sp-3);
+}
+.stat-value { display: block; font-size: var(--fs-16); font-weight: 500; }
+.stat-label { font-size: var(--fs-11); color: var(--on-surface-variant); }
+
+.tips { margin: var(--sp-2) 0 0; padding-left: 20px; }
+.tips li { margin: var(--sp-1) 0; }
+.warn {
+  background: var(--error-container);
+  color: var(--on-error-container);
+  border-radius: var(--radius-xs);
+  padding: var(--sp-3) var(--sp-4);
+  margin-top: var(--sp-4);
+  font-size: var(--fs-14);
+}
+.warn ul { margin: var(--sp-1) 0 0; padding-left: var(--sp-5); }
+
+/* -- sparklines -- */
+.spark { margin-top: var(--sp-2); }
+.spark svg { width: 100%; height: 44px; display: block; }
+.spark-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-11);
+  color: var(--on-surface-variant);
+}
+
+/* -- snackbar (M3): inverse-surface, elevation 3, status-icoon via mask.
+   Het icoon volgt currentColor (mask), zodat het met de themakleuren meegaat
+   zonder losse SVG's in app.js. Binnenkomen: 0,3s M3-easing; verdwijnen:
+   korter en eenvoudig. -- */
+.snackbar {
+  position: fixed;
+  left: 50%;
+  bottom: var(--sp-6);
+  transform: translate(-50%, 16px);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 48px;
+  max-width: min(90vw, 560px);
+  padding: 10px var(--sp-4);
+  border-radius: var(--radius-xs);
+  background: var(--inverse-surface);
+  color: var(--inverse-on-surface);
+  font-size: var(--fs-14);
+  line-height: 20px;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: var(--elev-3);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.snackbar::before {
+  content: "";
+  flex: none;
+  width: 18px;
+  height: 18px;
+  background-color: currentColor;
+  -webkit-mask: var(--icoon-ok) center / contain no-repeat;
+  mask: var(--icoon-ok) center / contain no-repeat;
+}
+.snackbar.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1),
+              transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+/* fout: M3 error-container + uitroepteken-icoon */
+.snackbar.err { background: var(--error-container); color: var(--on-error-container); }
+.snackbar.err::before {
+  -webkit-mask-image: var(--icoon-fout);
+  mask-image: var(--icoon-fout);
+}
+
+/* -- inloggen -- */
+.login-body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4);
+  background: var(--surface);
+}
+.login-kaart {
+  width: min(380px, 100%);
+  background: var(--card-bg);
+  border-radius: var(--radius-m);
+  padding: var(--sp-6);
+  box-shadow: var(--elev-1);
+}
+.login-logo { display: grid; place-items: center; margin-bottom: var(--sp-4); }
+.login-kaart h1 { margin: 0 0 var(--sp-4); font-size: var(--fs-20); font-weight: 500; text-align: center; }
+.login-kaart .field { margin-bottom: var(--sp-3); }
+.login-kaart .btn { width: 100%; margin-top: var(--sp-2); }
+.login-hint {
+  margin: 0 0 var(--sp-4);
+  font-size: var(--fs-12);
+  line-height: 16px;
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+.login-kaart .login-hint:last-child { margin: var(--sp-4) 0 0; }
+.login-fout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  background: var(--error-container);
+  color: var(--on-error-container);
+  border-radius: var(--radius-full); /* pill, zoals de invoervelden ernaast */
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-14);
+  line-height: 20px;
+  font-weight: 500;
+  margin: 0 0 var(--sp-3);
+  animation: fade-up 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+/* foutmelding met hetzelfde icoontje als de fout-snackbar (mask + currentColor) */
+.login-fout::before {
+  content: "";
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  background-color: currentColor;
+  -webkit-mask: var(--icoon-fout) center / contain no-repeat;
+  mask: var(--icoon-fout) center / contain no-repeat;
+}
+
+/* ==========================================================================
+   -- motion -- subtiele M3-overgangen; met respect voor reduced motion
+   ========================================================================== */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes modal-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(10px) scale(0.97); }
+}
+
+/* kaarten en lijstrijen komen zacht binnen zodra ze in beeld komen (initReveal).
+   Zonder JS (geen .js-class op <html>) blijft alles gewoon zichtbaar. */
+.js [data-reveal] { opacity: 0; transform: translateY(6px); }
+.js [data-reveal].revealed { animation: fade-up 0.32s cubic-bezier(0.2, 0, 0, 1) both; }
+.grid [data-reveal]:nth-child(2) { animation-delay: 45ms; }
+.grid [data-reveal]:nth-child(3) { animation-delay: 90ms; }
+.grid [data-reveal]:nth-child(4) { animation-delay: 135ms; }
+.grid [data-reveal]:nth-child(n+5) { animation-delay: 180ms; }
+.act-list .act-row:nth-of-type(2) { animation-delay: 35ms; }
+.act-list .act-row:nth-of-type(3) { animation-delay: 70ms; }
+.act-list .act-row:nth-of-type(4) { animation-delay: 105ms; }
+.act-list .act-row:nth-of-type(5) { animation-delay: 140ms; }
+.act-list .act-row:nth-of-type(n+6) { animation-delay: 175ms; }
+
+/* paginakop schuift zacht mee bij binnenkomst; de login-kaart doet dat ook
+   (losse pagina zonder .js-class, dus daar zonder poort) */
+.js .page-header { animation: fade-up 0.4s cubic-bezier(0.2, 0, 0, 1) both; }
+.login-kaart { animation: fade-up 0.4s cubic-bezier(0.2, 0, 0, 1) both; }
+
+/* invoervelden binnen een binnenkomende kaart infaden (o.a. Instellingen).
+   Velden die pas later zichtbaar worden (bv. API-sleutel bij AI-aanbieder)
+   faden op dat moment alsnog zacht in. */
+.js [data-reveal].revealed .form-grid .field { animation: fade-in 0.3s ease both; }
+.js [data-reveal].revealed .form-grid .field:nth-child(2) { animation-delay: 40ms; }
+.js [data-reveal].revealed .form-grid .field:nth-child(3) { animation-delay: 80ms; }
+.js [data-reveal].revealed .form-grid .field:nth-child(4) { animation-delay: 120ms; }
+.js [data-reveal].revealed .form-grid .field:nth-child(n+5) { animation-delay: 160ms; }
+
+/* 2FA-invoer verschijnt zacht zodra de rij wordt getoond */
+.js .mfa-row:not([hidden]) { animation: fade-up 0.25s cubic-bezier(0.2, 0, 0, 1); }
+
+/* voortgangsbalk (readyheid, weekdoel) vloeit van 0 naar zijn waarde zodra de
+   kaart in beeld komt; daarna regelt de bestaande width-transition updates */
+@keyframes grow-x { from { width: 0; } }
+.js [data-reveal].revealed .progress > span {
+  animation: grow-x 0.7s cubic-bezier(0.2, 0, 0, 1) 0.15s backwards;
+}
+
+/* navigatie-icoontje tilt zacht op bij hover */
+.nav-item .nav-icon { transition: transform 0.15s; }
+.nav-item:hover .nav-icon { transform: translateY(-1px); }
+
+/* pijltje schuift mee bij hover op een activiteitenrij */
+.act-row .chev { transition: transform 0.15s; }
+.act-row:hover .chev { transform: translateX(2px); }
+.act-row:active { background: var(--surface-container-high); }
+
+/* detailvenster: schaalend binnen, wegfadend bij sluiten */
+.modal[open] { animation: modal-in 0.24s cubic-bezier(0.2, 0, 0, 1); }
+.modal[open]::backdrop { animation: fade-in 0.24s ease; }
+.modal.closing { animation: modal-out 0.17s ease both; }
+.modal.closing::backdrop { animation: fade-out 0.17s ease both; }
+
+/* adviespagina: accordeon-inhoud infaden, voortgangsbalk vloeit */
+.accordion[open] .acc-body { animation: fade-up 0.2s cubic-bezier(0.2, 0, 0, 1); }
+.progress > span { transition: width 0.6s cubic-bezier(0.2, 0, 0, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-reveal] { opacity: 1; transform: none; }
+  .js [data-reveal].revealed { animation: none; }
+  .modal[open], .modal[open]::backdrop,
+  .modal.closing, .modal.closing::backdrop, .accordion[open] .acc-body,
+  .tip-day[open] .tip-day-body {
+    animation: none;
+  }
+  .progress > span { transition: none; }
+  .act-row:hover .chev { transform: none; }
+  .tip-day .chev { transition: none; }
+  .js .page-header { animation: none; }
+  .login-kaart { animation: none; }
+  .js [data-reveal].revealed .form-grid .field { animation: none; }
+  .js [data-reveal].revealed .progress > span { animation: none; }
+  .js .mfa-row:not([hidden]) { animation: none; }
+  .nav-item .nav-icon { transition: none; }
+  .nav-item:hover .nav-icon { transform: none; }
+  .snackbar, .snackbar.show { transition: none; }
+  .login-fout { animation: none; }
+}
+
+/* -- trainingsschema -- */
+/* wisselen van week gebeurt in de paginakop: ronde pijlknoppen rond het
+   weeknummer (klassiek datapicker-patroon) i.p.v. een aparte navigatiekaart */
+.week-switch { gap: var(--sp-3); }
+.week-switch .week-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
+  text-align: center;
+}
+.week-label b { font-size: var(--fs-16); }
+.week-switch .arrow { width: 40px; padding: 0; flex: none; }
+.week-switch .btn.text { flex: none; }
+
+.schema-goal { display: flex; align-items: center; gap: var(--sp-2); }
+.schema-goal .hint { margin-top: 0; }
+.schema-goal label { font-size: var(--fs-14); color: var(--on-surface-variant); }
+.schema-goal input {
+  width: 72px;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-full);
+  background: var(--field-bg);
+  color: var(--on-surface);
+  font: inherit;
+  font-size: var(--fs-16);
+  text-align: center;
+}
+
+.schema-days { display: flex; flex-direction: column; gap: var(--sp-1); }
+.schema-row {
+  display: grid;
+  grid-template-columns: 88px 1fr 110px;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: var(--sp-1) 0;
+}
+.schema-row .dag {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 500;
+  color: var(--on-surface-variant);
+}
+.schema-row.filled .dag { color: var(--on-surface); }
+.schema-row.filled .dag { color: var(--on-surface); }
+/* "vandaag" niet als chip maar als accent op de dag zelf: dotje + kleur,
+   volledige dagnaam staat in de title */
+.schema-row.vandaag .dag { color: var(--primary); }
+.schema-row.vandaag .dag::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.schema-row select,
+.schema-row input[type="number"] {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-full);
+  background: var(--field-bg);
+  color: var(--on-surface);
+  font: inherit;
+  /* 16px zoals alle invoervelden in de app (Instellingen, Maaltijden);
+     voorkomt tevens auto-zoom van iOS bij focus */
+  font-size: var(--fs-16);
+  transition: border-color 0.15s;
+}
+.schema-row select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: var(--sp-10);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238e9199' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+.schema-row select:focus,
+.schema-row input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+@media (max-width: 559px) {
+  .schema-row { grid-template-columns: 56px 1fr 84px; }
+}
+
+/* -- AI-trainingsadvies bij het schema -- */
+.schema-advice { margin-top: var(--sp-6); }
+/* titel + bron/generatietijd links, genereerknop rechts in de kaartkop:
+   de actie is nu ook zichtbaar bij een leeg advies */
+.advice-head { min-width: 0; }
+.advice-head .card-title { margin-bottom: 0; }
+.advice-head .hint { margin-top: 2px; }
+.schema-advice .sub-title { margin-top: var(--sp-5); }
+/* dag-rijen als open lijst i.p.v. losse grijze doosjes: badge en titel staan
+   op dezelfde linkerlijn als de sectiekop "Per training"; rijen scheiden zich
+   zoals de rijen elders in de app (hover, geen lijn) */
+.tip-day { margin: 0; padding: 0; }
+.tip-day summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  /* zelfde hover-patroon als de rijen op Maaltijden/Activiteiten (.list-item):
+     de achtergrond loopt via negatieve marges door in de kaartpadding, terwijl
+     badge en titel op hun plek blijven (margin -12px + padding 12px = nul) */
+  margin: 0 calc(var(--sp-3) * -1);
+  padding: var(--sp-3);
+  border-radius: var(--radius-s);
+  transition: background 0.15s;
+}
+.tip-day summary:hover { background: var(--surface-container); }
+.tip-day summary:active { background: var(--surface-container-high); }
+.tip-day summary::-webkit-details-marker { display: none; }
+.tip-day-badge {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  display: grid;
+  place-items: center;
+  font-weight: 500;
+}
+.tip-day .chev {
+  flex: none;
+  margin-left: auto;
+  color: var(--on-surface-variant);
+  transition: transform 0.2s;
+}
+.tip-day[open] .chev { transform: rotate(180deg); }
+.tip-day-name { flex: 1; min-width: 0; }
+.tip-day-title { margin: 0; font-size: var(--fs-16); font-weight: 500; }
+.tip-day-body { padding: var(--sp-1) 0 var(--sp-4); }
+.tip-day[open] .tip-day-body { animation: fade-up 0.2s cubic-bezier(0.2, 0, 0, 1); }
+/* opbouw-stappen als genummerde cirkels i.p.v. kale ol-nummers */
+.tip-steps {
+  list-style: none;
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  counter-reset: stap;
+}
+.tip-steps li {
+  counter-increment: stap;
+  position: relative;
+  margin: var(--sp-2) 0 0;
+  padding-left: 30px;
+}
+.tip-steps li::before {
+  content: counter(stap);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  font-size: var(--fs-11);
+  font-weight: 500;
+  display: grid;
+  place-items: center;
+}
+/* uitleg ("waarom") als aangehechte notitie — zelfde stijl als de
+   wetenschappelijke onderbouwing op de adviespagina */
+.tip-why {
+  margin: var(--sp-3) 0 0;
+  padding: 0 0 0 var(--sp-3);
+  border-left: 2px solid var(--primary);
+  color: var(--on-surface-variant);
+}
+.tip-why::before {
+  content: "Waarom";
+  display: block;
+  font-size: var(--fs-11);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.tip-prog {
+  margin: var(--sp-3) 0 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+  border-radius: var(--radius-xs);
+}
+
+/* weektips als eigen sectie met scheidingslijn — zelfde ritme als de
+   scheidingen tussen de dag-rijen (12px lucht boven, 16px eronder) */
+.week-tips {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--outline-variant);
+}
+.week-tips .sub-title { margin: 0; }
+.week-tips .tips { list-style: none; margin: var(--sp-2) 0 0; padding: 0; }
+.week-tips .tips li {
+  display: flex;
+  gap: var(--sp-3);
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-14);
+  line-height: 20px;
+}
+.week-tips .tips li::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-top: 7px;
+}
+
+/* -- kleine schermen (telefoons): compacter en waar nodig gestapeld -- */
+@media (max-width: 559px) {
+  .page { padding: var(--sp-4) var(--sp-4) var(--sp-8); }
+  .card { padding: var(--sp-4); }
+  .modal { padding: var(--sp-4); }
+  .accordion summary { padding: var(--sp-3) var(--sp-4); }
+  .acc-body { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+  .tip-day-body { padding: var(--sp-1) 0 var(--sp-3); }
+  .mfa-row { flex-wrap: wrap; }
+  .mfa-row .field { width: 100%; }
+  .analysis li { flex-direction: column; gap: var(--sp-1); }
+  .analysis .a-label { width: auto; }
+  /* compacte dagenrij; "vandaag" is een dotje vóór de dagletter, dat past
+     ook in de smalle dagkolom */
+  .schema-row { grid-template-columns: 56px 1fr 84px; }
+}
+
+/* -- telefoons (<=767px): navigatie onderaan zoals in mobiele apps.
+   Dit blok staat bewust aan het einde van het bestand: het moet de
+   kleinere-schermen-regels hierboven (o.a. .page-padding) overschrijven,
+   anders verdwijnt de onderkant van pagina's achter de balk. -- */
+@media (max-width: 767px) {
+  :root { --bottomnav-h: 66px; }
+  .drawer {
+    top: auto;
+    right: 0;
+    width: 100%;
+    height: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px));
+    padding: var(--sp-1) var(--sp-1) calc(var(--sp-1) + env(safe-area-inset-bottom, 0px));
+    flex-direction: row;
+    align-items: stretch;
+    border-top: 1px solid var(--outline-variant);
+  }
+  .drawer-brand, .drawer-foot { display: none; }
+  .drawer-nav { flex-direction: row; gap: 0; width: 100%; }
+  .nav-item {
+    flex: 1 1 0;
+    width: auto;
+    height: auto;
+    min-height: 56px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: var(--sp-1) 0;
+    border-radius: var(--radius-xs);
+    font-size: 10px;
+    line-height: 12px;
+  }
+  .nav-label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nav-item.active { background: transparent; color: var(--primary); }
+  .nav-item.active .nav-icon {
+    width: min(56px, 100%);
+    height: 30px;
+    border-radius: var(--radius-full);
+    background: var(--secondary-container);
+    color: var(--on-secondary-container);
+  }
+  .main { margin-left: 0; }
+  .page { padding: var(--sp-4) var(--sp-4) calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--sp-8)); }
+  .sticky { position: static; }
+  .snackbar { bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--sp-4)); }
+  .form-grid { grid-template-columns: 1fr; } /* elk veld op eigen rij: labels lopen nooit vol */
+}

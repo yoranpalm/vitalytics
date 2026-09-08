@@ -1,0 +1,23 @@
+﻿# ==== Gevoelige data: NOOIT committeren ====
+# SQLite-database (accounts, gezondheidsdata, Garmin-wachtwoord, AI-API-sleutel),
+# Garmin-tokens, session-secret, uploads en logs.
+data/
+
+# Omgevingsvariabelen / lokale sleutels
+.env
+.env.*
+*.pem
+*.key
+
+# ==== Niet-meesturen: builds, caches, scratch ====
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# eigen scratch-bestanden en -logs (beginnen met _)
+_*
+
+# OS-/editor-meuk
+Thumbs.db
+.DS_Store

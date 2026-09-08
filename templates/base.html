@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fafbfe" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11141a" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Lokale gezondheidscoach: Garmin-data, maaltijdlogboek en persoonlijk advies.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vitalytics">
+<title>{% block title %}Vitalytics{% endblock %}</title>
+<script>document.documentElement.classList.add("js");</script>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/static/icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css?v=95">
+</head>
+<body class="{{ 'demo' if session.get('demo') else '' }}">
+
+{% set icon_dash = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>' | safe %}
+{% set icon_meals = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>' | safe %}
+{% set icon_advice = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/></svg>' | safe %}
+{% set icon_settings = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="15" cy="7" r="2.2" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="2.2" fill="currentColor" stroke="none"/><circle cx="16" cy="17" r="2.2" fill="currentColor" stroke="none"/></svg>' | safe %}
+{% set icon_act = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"/><path d="M12 6v2"/><circle cx="12" cy="14" r="7.5"/><path d="M12 14l3-3"/></svg>' | safe %}
+{% set icon_schema = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3.5 10h17"/><path d="M8 15h3"/></svg>' | safe %}
+{% set icon_logo = '<svg width="36" height="36" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="var(--primary-container)"/><path d="M9.5 9.5L17 24.5L24.5 9.5" fill="none" stroke="var(--on-primary-container)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' | safe %}
+
+<aside class="drawer">
+  <a class="drawer-brand" href="/">
+    {{ icon_logo }}
+    <span class="brand-text"><b>Vitalytics</b><span>AI-coach</span></span>
+  </a>
+  <nav class="drawer-nav" aria-label="Hoofdnavigatie">
+    <a class="nav-item {{ 'active' if request.endpoint == 'dashboard' }}" href="/">
+      <span class="nav-icon">{{ icon_dash }}</span><span class="nav-label">Dashboard</span>
+    </a>
+    <a class="nav-item {{ 'active' if request.endpoint == 'activities_page' }}" href="/activities">
+      <span class="nav-icon">{{ icon_act }}</span><span class="nav-label">Activiteiten</span>
+    </a>
+    <a class="nav-item {{ 'active' if request.endpoint == 'schema_page' }}" href="/schema">
+      <span class="nav-icon">{{ icon_schema }}</span><span class="nav-label">Schema</span>
+    </a>
+    <a class="nav-item {{ 'active' if request.endpoint == 'meals' }}" href="/meals">
+      <span class="nav-icon">{{ icon_meals }}</span><span class="nav-label">Maaltijden</span>
+    </a>
+    <a class="nav-item {{ 'active' if request.endpoint == 'advice_page' }}" href="/advice">
+      <span class="nav-icon">{{ icon_advice }}</span><span class="nav-label">Advies</span>
+    </a>
+    <a class="nav-item {{ 'active' if request.endpoint == 'settings_page' }}" href="/settings">
+      <span class="nav-icon">{{ icon_settings }}</span><span class="nav-label">Instellingen</span>
+    </a>
+  </nav>
+  <div class="drawer-foot">
+    <p class="foot-title">Systeem</p>
+    <div id="drawer-status"><div class="foot-row"><span class="dot ok"></span>Verbinden…</div></div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page">{% block content %}{% endblock %}</div>
+</main>
+
+<div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
+
+<script src="/static/app.js?v=46"></script>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () =>
+      navigator.serviceWorker.register("/sw.js").catch(() => {}));
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Activiteiten · Vitalytics{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <h1 class="headline">Activiteiten</h1>
+    <p class="page-sub">Je workouts van Garmin, met automatische analyse per activiteit.</p>
+  </div>
+  <div class="header-actions">
+    <button id="btn-sync-act" class="btn">Nu syncen</button>
+  </div>
+</header>
+
+{% if not rows %}
+<div class="card empty" data-reveal>
+  <p>Nog geen activiteiten. Klik op <b>Nu syncen</b> (met werkende Garmin-login) of importeer
+  je Garmin-export via <a href="/settings">Instellingen</a>.</p>
+</div>
+{% endif %}
+
+{% if week and week.aantal %}
+<div class="grid">
+  <article class="card metric col-3" data-reveal>
+    <p class="metric-label">Activiteiten (7 dagen)</p>
+    <p class="metric-value">{{ week.aantal }}</p>
+  </article>
+  <article class="card metric col-3" data-reveal>
+    <p class="metric-label">Totale duur</p>
+    <p class="metric-value">{{ week.duur_fmt }}</p>
+  </article>
+  <article class="card metric col-3" data-reveal>
+    <p class="metric-label">Totale afstand</p>
+    <p class="metric-value">{{ week.afstand_km }}<span class="metric-unit"> km</span></p>
+  </article>
+  <article class="card metric col-3" data-reveal>
+    <p class="metric-label">Verbrand</p>
+    <p class="metric-value">{{ week.kcal|int }}<span class="metric-unit"> kcal</span></p>
+  </article>
+</div>
+{% endif %}
+
+{% macro activity_body(a, an) -%}
+  <div class="stat-grid stat-flush">
+    <div class="stat"><span class="stat-value">{{ an.duur }}</span><span class="stat-label">duur</span></div>
+    <div class="stat"><span class="stat-value">{{ an.afstand }}</span><span class="stat-label">afstand</span></div>
+    <div class="stat"><span class="stat-value">{{ an.tempo }}</span><span class="stat-label">tempo</span></div>
+    <div class="stat"><span class="stat-value">{{ a.avg_hr|int if a.avg_hr else '–' }}</span><span class="stat-label">gem. HF</span></div>
+    <div class="stat"><span class="stat-value">{{ a.calories|int if a.calories else '–' }}</span><span class="stat-label">kcal</span></div>
+    <div class="stat"><span class="stat-value">{{ an.score }}</span><span class="stat-label">score /5</span></div>
+  </div>
+  {% if an.spieren %}
+  <div class="spieren-blok">
+    {{ an.spieren.figuur|safe }}
+    <div>
+      <p class="spieren-label">Getrainde spiergroepen</p>
+      <p class="spieren-groepen">{{ an.spieren.groepen|join(' · ') }}</p>
+    </div>
+  </div>
+  {% endif %}
+  <p class="verdict">{{ an.verdict }}</p>
+  <h4 class="analysis-title">Wat betekent dit?</h4>
+  <ul class="analysis">
+    {% for p in an.punten %}
+    {% if p is mapping %}
+    <li><span class="a-label">{{ p.label }}</span><span class="a-text">{{ p.tekst }}</span></li>
+    {% else %}
+    <li><span class="a-text">{{ p }}</span></li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+{%- endmacro %}
+
+<div class="card act-overview" data-reveal>
+  {% if rows %}
+  <div class="card-head">
+    <h2 class="card-title">Alle activiteiten</h2>
+    <span class="chip">{{ rows|length }}</span>
+  </div>
+  <div class="list act-list">
+    {% for item in rows %}
+    {% set a = item.rec %}
+    {% set an = item.an %}
+    <button type="button" class="list-item act-row" data-reveal data-name="{{ a.name }}"
+            title="Bekijk de analyse van deze activiteit">
+      <span class="list-thumb">{{ an.icon|safe }}</span>
+      <span class="list-text">
+        <span class="list-head">{{ a.name }}</span>
+        <span class="list-sub">{{ an.type_label }} · {{ a.start_time|datum_tijd }} · {{ an.duur }} · {{ an.afstand }}</span>
+      </span>
+      {% if an.te_label and an.te_label != '–' %}
+      <span class="chip tonal" title="Trainingsbelasting (aëroob effect)">{{ an.te_label }}</span>
+      {% endif %}
+      {% if a.source == 'demo' %}<span class="chip">demo</span>{% endif %}
+      <svg class="chev chev-right" width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+      <template class="act-detail">
+        <div class="card-head">
+          <div class="act-head">
+            <span class="act-emoji">{{ an.icon|safe }}</span>
+            <div>
+              <p class="act-sport">{{ an.type_label }}</p>
+              <p class="act-datum">{{ a.start_time|datum_tijd }}</p>
+            </div>
+          </div>
+          <div class="act-chips">
+            {% if an.te_label and an.te_label != '–' %}
+            <span class="chip tonal" title="Trainingsbelasting (aëroob effect)">{{ an.te_label }}</span>
+            {% endif %}
+            {% if a.source == 'demo' %}<span class="chip">demo</span>{% endif %}
+          </div>
+        </div>
+        {{ activity_body(a, an) }}
+      </template>
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<dialog id="act-modal" class="modal">
+  <div class="modal-top">
+    <h3 class="modal-title" id="act-modal-title">Activiteit</h3>
+    <button type="button" class="icon-btn" id="act-modal-close" aria-label="Sluiten">✕</button>
+  </div>
+  <div class="modal-body" id="act-modal-body"></div>
+</dialog>
+{% endblock %}

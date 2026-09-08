@@ -1,0 +1,8 @@
+# Minimaal nodig om de app te draaien
+flask>=3.0
+
+# productie-server voor hosting (mini pc / thuisnetwerk)
+waitress>=3.0
+
+# Garmin Connect-sync (unofficial client)
+garminconnect>=0.3.11

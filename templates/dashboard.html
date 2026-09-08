@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Vitalytics{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <h1 class="headline">Overzicht</h1>
+    <p class="page-sub">Herstel, belasting en voeding voor vandaag.</p>
+    {% if laatste_sync %}
+    <p class="hint sync-info"><span class="dot ok"></span>Laatste geslaagde Garmin-sync: {{ laatste_sync }}</p>
+    {% endif %}
+  </div>
+  <div class="header-actions">
+    <button id="btn-sync" class="btn">Nu syncen met Garmin</button>
+  </div>
+</header>
+
+{% if not cards %}
+<div class="grid">
+  <div class="card empty col-12" data-reveal>
+    <p>Geen data gevonden. Klik op <b>Nu syncen met Garmin</b> of importeer je Garmin-export
+    via <a href="/settings">Instellingen</a>. Voor een live sync heb je eerst
+    <code>pip install garminconnect</code> nodig.</p>
+  </div>
+</div>
+{% else %}
+<div class="grid">
+  {% for c in cards %}
+  <article class="card metric col-2" data-reveal>
+    <p class="metric-label">{{ c.label }}</p>
+    <p class="metric-value">{{ c.value }}<span class="metric-unit"> {{ c.unit }}</span></p>
+    {% if c.spark %}<div class="spark" data-spark="{{ c.spark }}" data-unit="{{ c.unit }}"></div>{% endif %}
+    <p class="hint">{{ c.hint }}</p>
+  </article>
+  {% endfor %}
+
+  <article class="card col-3 last-act dash-card" data-reveal>
+    <div class="card-head">
+      <h2 class="card-title">Laatste activiteit</h2>
+      <a class="btn text small" href="/activities">Alles</a>
+    </div>
+    {% if last_act %}
+    <div class="act-head">
+      <span class="act-emoji">{{ last_act.an.icon|safe }}</span>
+      <div>
+        <p class="act-sport">{{ last_act.rec.name }}</p>
+        <p class="act-datum">{{ last_act.an.type_label }} · {{ last_act.rec.start_time|datum_tijd }}</p>
+      </div>
+    </div>
+    <ul class="act-stats">
+      <li><span>duur</span><strong>{{ last_act.an.duur }}</strong></li>
+      <li><span>afstand</span><strong>{{ last_act.an.afstand }}</strong></li>
+      <li><span>tempo</span><strong>{{ last_act.an.tempo }}</strong></li>
+      <li><span>gem. HF</span><strong>{{ last_act.rec.avg_hr|int if last_act.rec.avg_hr else '–' }}</strong></li>
+      <li><span>kcal</span><strong>{{ last_act.rec.calories|int if last_act.rec.calories else '–' }}</strong></li>
+      <li><span>score</span><strong>{{ last_act.an.score }} /5</strong></li>
+    </ul>
+    {% if last_act.an.spieren %}
+    <div class="spieren-blok">
+      {{ last_act.an.spieren.figuur|safe }}
+      <div>
+        <p class="spieren-label">Getrainde spiergroepen</p>
+        <p class="spieren-groepen">{{ last_act.an.spieren.groepen|join(' · ') }}</p>
+      </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="hint advice-hint">Nog geen activiteiten gesynct.</p>
+    {% endif %}
+  </article>
+
+  <article class="card col-6 dash-card" data-reveal>
+    <div class="card-head">
+      <h2 class="card-title">Vandaag gegeten</h2>
+      <a class="btn text small" href="/meals">Bewerken</a>
+    </div>
+    {% if meals_today %}
+    <div class="list">
+      {% for m in meals_today %}
+      <div class="list-item">
+        <div class="list-thumb">🍽️</div>
+        <div class="list-text">
+          <div class="list-head">{{ m.name }}</div>
+          <div class="list-sub">{{ m.ts.split(' ')[1] }} · {{ m.kcal|int }} kcal · E{{ m.protein|int }} K{{ m.carbs|int }} V{{ m.fat|int }} g</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="list-total">
+      <span>{{ totals.kcal|int }} kcal</span>
+      <span>E {{ totals.protein|int }} g</span>
+      <span>K {{ totals.carbs|int }} g</span>
+      <span>V {{ totals.fat|int }} g</span>
+    </div>
+    {% else %}
+    <p class="hint">Nog niets gelogd vandaag.</p>
+    {% endif %}
+  </article>
+
+  <article class="card col-3 dash-card" data-reveal>
+    <div class="card-head">
+      <h2 class="card-title">Laatste advies</h2>
+      {% if latest %}<a class="btn text small" href="/advice">Alles</a>
+      {% else %}<a class="btn text small" href="/advice">Advies genereren</a>{% endif %}
+    </div>
+    {% if latest %}
+      <div class="readiness">
+        <span class="num">{{ latest.readiness|int }}</span>
+        <span class="den">/ 100 trainingsklaar</span>
+      </div>
+      <div class="progress"><span style="width: {{ latest.readiness|int }}%"></span></div>
+      <p><b>{{ latest.payload.training.type|default('–') }}</b><br>
+         {{ latest.payload.training.duur_min|default('?') }} min · {{ latest.payload.training.intensiteit|default('') }}</p>
+      <p class="hint">{{ latest.payload.training.waarom|default('') }}</p>
+      <span class="chip tonal">{{ latest.source }}</span>
+    {% else %}
+      <p class="hint advice-hint">Nog geen advies gegenereerd.</p>
+    {% endif %}
+  </article>
+</div>
+{% endif %}
+{% endblock %}

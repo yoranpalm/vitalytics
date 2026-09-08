@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Maaltijden · Vitalytics{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <h1 class="headline">Maaltijden</h1>
+    <p class="page-sub">Log je maaltijden handmatig, of laat de AI de voedingswaarden van een omschrijving of foto inschatten.</p>
+  </div>
+</header>
+
+<div class="grid">
+  <form class="card col-5 sticky" id="meal-form" data-reveal onsubmit="return false">
+    <h2 class="card-title" id="meal-form-title">Nieuwe maaltijd</h2>
+    <input type="hidden" id="m-edit-id">
+    <div class="segmented" role="group" aria-label="Invoermethode">
+      <button type="button" class="seg-btn active" data-mode="manual" aria-pressed="true">Zelf invullen</button>
+      <button type="button" class="seg-btn" data-mode="ai" aria-pressed="false">AI-schatting</button>
+    </div>
+    <div class="form-grid">
+      <label class="field w-full manual-field">
+        <span class="field-box">
+          <input id="m-naam" placeholder=" " autocomplete="off">
+          <span class="flabel">Naam van de maaltijd</span>
+        </span>
+      </label>
+      <label class="field field-dag">
+        <span class="field-box">
+          <input id="m-datum" type="date" value="{{ vandaag }}" max="{{ vandaag }}">
+          <span class="flabel">Dag</span>
+        </span>
+      </label>
+      <label class="field manual-field">
+        <span class="field-box">
+          <input id="m-kcal" type="number" inputmode="decimal" min="0" placeholder=" ">
+          <span class="flabel">kcal</span>
+        </span>
+      </label>
+      <label class="field manual-field">
+        <span class="field-box">
+          <input id="m-eiwit" type="number" inputmode="decimal" min="0" placeholder=" ">
+          <span class="flabel">Eiwit (g)</span>
+        </span>
+      </label>
+      <label class="field manual-field">
+        <span class="field-box">
+          <input id="m-koolhydraten" type="number" inputmode="decimal" min="0" placeholder=" ">
+          <span class="flabel">Koolhydraten (g)</span>
+        </span>
+      </label>
+      <label class="field manual-field">
+        <span class="field-box">
+          <input id="m-vet" type="number" inputmode="decimal" min="0" placeholder=" ">
+          <span class="flabel">Vet (g)</span>
+        </span>
+      </label>
+      <label class="field w-full manual-field">
+        <span class="field-box">
+          <input id="m-opmerking" placeholder=" " autocomplete="off">
+          <span class="flabel">Opmerking</span>
+        </span>
+      </label>
+    </div>
+    <div class="meal-ai">
+      <div id="ai-text-row">
+        <h3 class="sub-title">Omschrijf je maaltijd</h3>
+        <label class="field">
+          <span class="field-box field-area">
+            <textarea id="m-beschrijving" rows="4" placeholder='bv. "havermout met banaan en pindakaas"'></textarea>
+          </span>
+        </label>
+        <div class="card-actions">
+          <button type="button" id="btn-estimate-text" class="btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 18l-2.4-6.6L3 12l6.6-2.4L12 3Z"/><path d="M18.8 15.2l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1 1-2.6Z"/></svg>
+            AI-schatting maken
+          </button>
+        </div>
+      </div>
+      <h3 class="sub-title" id="ai-foto-titel">Of via een foto</h3>
+      <div class="file-row" id="photo-row">
+        <input type="file" id="m-photo" accept="image/*" hidden>
+        <label class="btn tonal" for="m-photo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.5-2h5L16 7h2.5A1.5 1.5 0 0 1 20 8.5V17a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17V8.5Z"/><circle cx="12" cy="12.5" r="3.2"/></svg>
+          Foto kiezen
+        </label>
+        <span id="m-photo-name" class="hint"></span>
+        <button type="button" id="btn-clear-photo" class="btn text" hidden>Foto verwijderen</button>
+      </div>
+      <p class="hint">De AI schat naam en voedingswaarden in en schakelt vanzelf terug naar "Zelf invullen" — controleer de schatting altijd zelf voor je opslaat. Foto's worden niet opgeslagen.</p>
+    </div>
+    <div id="m-preview" class="preview"></div>
+    <div class="card-actions">
+      <button id="btn-save-manual" class="btn">Maaltijd toevoegen</button>
+      <button id="btn-edit-cancel" class="btn text" hidden>Annuleren</button>
+    </div>
+  </form>
+
+  <div class="col-7" id="meals-day-list">
+    <div class="card-head">
+      <h2 class="card-title">Gelogde maaltijden</h2>
+      <span class="chip" id="meals-count">{{ aantal }}</span>
+    </div>
+    {% for dag in dagen %}
+    <details class="card accordion" data-reveal {% if loop.first %}open{% endif %}>
+      <summary>
+        <span class="acc-title">{{ dag.label }}</span>
+        <span class="acc-meta">{{ dag.maaltijden|length }} {{ 'maaltijd' if dag.maaltijden|length == 1 else 'maaltijden' }} · {{ dag.totaal.kcal|int }} kcal</span>
+        <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="acc-body">
+        <div class="list">
+          {% for m in dag.maaltijden %}
+          <div class="list-item" data-kcal="{{ m.kcal or 0 }}">
+            {% if m.photo_path %}
+            <a class="list-thumb" href="/uploads/{{ m.photo_path }}" target="_blank">
+              <img src="/uploads/{{ m.photo_path }}" alt="foto van {{ m.name }}">
+            </a>
+            {% else %}
+            <div class="list-thumb">🍽️</div>
+            {% endif %}
+            <div class="list-text">
+              <div class="list-head">{{ m.name }}</div>
+              <div class="list-sub">{{ m.ts[11:16] }} · {{ m.kcal|int }} kcal · E{{ m.protein|int }} K{{ m.carbs|int }} V{{ m.fat|int }} g</div>
+            </div>
+            <button class="icon-btn edit-meal" data-id="{{ m.id }}" aria-label="Maaltijd bewerken">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            </button>
+            <button class="icon-btn del-meal" data-id="{{ m.id }}" aria-label="Maaltijd verwijderen">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
+    {% else %}
+    <div class="card empty" data-reveal><p>Nog geen maaltijden gelogd.</p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

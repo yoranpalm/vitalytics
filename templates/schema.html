@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Schema · Vitalytics{% endblock %}
+{% block content %}
+{% set sports = ['Sportschool', 'Zwemmen', 'Hardlopen', 'Fietsen', 'Wandelen', 'Yoga', 'Overig'] %}
+<header class="page-header">
+  <div>
+    <h1 class="headline">Trainingsschema</h1>
+    <p class="page-sub">Plan per week op welke dagen je wilt sporten, hoe lang en wat.</p>
+  </div>
+  <div class="header-actions week-switch">
+    {% if not meta.is_current %}<a class="btn text small" href="/schema">Deze week</a>{% endif %}
+    <a class="btn tonal arrow" href="/schema?week={{ meta.prev }}" aria-label="Vorige week" title="Vorige week">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+    </a>
+    <div class="week-label">
+      <b>Week {{ meta.nummer }}</b>
+      <span class="list-sub">{{ meta.bereik }}</span>
+    </div>
+    <a class="btn tonal arrow" href="/schema?week={{ meta.next }}" aria-label="Volgende week" title="Volgende week">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
+  </div>
+</header>
+
+<form id="schema-form" data-week="{{ plan.week }}">
+  <div class="grid">
+    <article class="card col-7" data-reveal>
+      <div class="card-head">
+        <h2 class="card-title">Jouw week</h2>
+        <div class="schema-goal">
+          <label for="schema-goal">Weekdoel</label>
+          <input type="number" id="schema-goal" min="1" max="14" step="1"
+                 value="{{ plan.sessions_goal if plan.sessions_goal else '' }}"
+                 placeholder="3" aria-label="Gewenste trainingen per week">
+          <span class="hint">keer per week</span>
+        </div>
+      </div>
+      <div class="schema-days">
+        {% for day in days %}
+        {% set entry = plan.entries.get(loop.index) %}
+        <div class="schema-row" data-weekday="{{ loop.index }}">
+          <span class="dag{% if meta.today_weekday == loop.index %} vandaag{% endif %}" title="{{ day }}{% if meta.today_weekday == loop.index %} &#8212; vandaag{% endif %}">{{ day[:2] }}</span>
+          <select aria-label="Sport op {{ day }}">
+            <option value="">&#8211; rustdag &#8211;</option>
+            {% for s in sports %}
+            <option value="{{ s }}" {{ 'selected' if entry and entry.sport == s }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+          <input type="number" min="5" max="600" step="5" placeholder="min"
+                 aria-label="Minuten op {{ day }}"
+                 value="{{ entry.minutes if entry else '' }}">
+        </div>
+        {% endfor %}
+      </div>
+      <div class="card-actions">
+        <button type="submit" id="btn-save-schema" class="btn">Schema opslaan</button>
+        <span class="hint">Dagen zonder sport gelden als rustdag.</span>
+      </div>
+    </article>
+
+    <article class="card col-5" data-reveal>
+      <div class="card-head">
+        <h2 class="card-title">Samenvatting</h2>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><span class="stat-value" id="schema-planned">0</span><span class="stat-label">gepland</span></div>
+        <div class="stat"><span class="stat-value" id="schema-goal-val">&#8211;</span><span class="stat-label">weekdoel</span></div>
+        <div class="stat"><span class="stat-value"><span id="schema-total">0</span><span class="metric-unit"> min</span></span><span class="stat-label">totale tijd</span></div>
+      </div>
+      <div class="progress"><span id="schema-bar" style="width: 0%"></span></div>
+      <p class="hint" id="schema-hint">Kies per dag een sport en vul de minuten in &#8212; dit overzicht rekent live mee.</p>
+    </article>
+  </div>
+</form>
+
+<article class="card schema-advice" data-reveal>
+  <div class="card-head">
+    <div class="advice-head">
+      <h2 class="card-title">AI-trainingsadvies{% if tips %} &#183; week {{ meta.nummer }}{% endif %}</h2>
+      {% if tips %}<span class="hint">{{ tips.source }} &#183; gegenereerd op {{ tips.created_at|datum_tijd }}</span>{% endif %}
+    </div>
+    <button type="button" id="btn-schema-advice" class="btn"
+            {% if not plan.entries %}disabled title="Vul eerst je schema in en sla op"{% endif %}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 18l-2.4-6.6L3 12l6.6-2.4L12 3Z"/><path d="M18.8 15.2l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1 1-2.6Z"/></svg>
+      <span>{{ 'Opnieuw genereren' if tips else 'AI-trainingsadvies genereren' }}</span>
+    </button>
+  </div>
+  {% if tips %}
+    {% if tips.payload.per_dag %}
+    <h3 class="sub-title">Per training</h3>
+    {% for d in tips.payload.per_dag %}
+    <details class="tip-day" {% if loop.index0 == open_tip %}open{% endif %}>
+      <summary>
+        <span class="tip-day-badge">{{ (d.dag or '?')[:2] }}</span>
+        <span class="tip-day-name">
+          <h4 class="tip-day-title">{{ d.sport or d.dag }}</h4>
+          <span class="list-sub">{{ d.dag }}{% if d.duur_min %} &#183; {{ d.duur_min }} min{% endif %}{% if d.opbouw %} &#183; {{ d.opbouw|length }} stappen{% endif %}</span>
+        </span>
+        <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </summary>
+      <div class="tip-day-body">
+        {% if d.opbouw %}
+        <ol class="tip-steps">{% for stap in d.opbouw %}<li>{{ stap }}</li>{% endfor %}</ol>
+        {% endif %}
+        {% if d.waarom %}<p class="tip-why">{{ d.waarom }}</p>{% endif %}
+        {% if d.progressie %}<p class="tip-prog"><b>Progressie:</b> {{ d.progressie }}</p>{% endif %}
+      </div>
+    </details>
+    {% endfor %}
+    {% endif %}
+    {% if tips.payload.tips %}
+    <div class="week-tips">
+      <h3 class="sub-title">Tips voor de hele week</h3>
+      <ul class="tips">{% for t in tips.payload.tips %}<li>{{ t }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+  {% else %}
+    <p class="hint">Vul hierboven je week in en sla op. Daarna bouwt de AI per training een concrete sessie-opbouw &#8212; in de sportschool (oefeningen, sets en herhalingen), in het zwembad (meters met rusttijden) &#8212; plus tips voor progressie week na week. Afhankelijk van de AI-aanbieder kan dit enkele seconden tot enkele minuten duren.</p>
+  {% endif %}
+</article>
+{% endblock %}

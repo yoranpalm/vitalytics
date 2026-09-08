@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Instellingen · Vitalytics{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <h1 class="headline">Instellingen</h1>
+    <p class="page-sub">{% if session.get('demo') %}Alleen bekijken — wijzigen kan alleen met een eigen account.{% else %}Profiel, Garmin-toegang en data-import/-export.{% endif %}</p>
+  </div>
+</header>
+
+<div class="grid">
+  {% if not session.get('demo') %}{# demo ziet hieronder alleen het account-kaartje #}
+  <form class="card col-6" data-reveal onsubmit="return false">
+    <h2 class="card-title">Profiel</h2>
+    <div class="form-grid">
+      <label class="field">
+        <span class="field-box">
+          <input name="age" type="number" inputmode="numeric" placeholder=" " value="{{ s.age or '' }}">
+          <span class="flabel">Leeftijd</span>
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-box">
+          <select name="sex">
+            <option value="" {{ 'selected' if not s.sex }}>Onbekend</option>
+            <option value="man" {{ 'selected' if s.sex == 'man' }}>Man</option>
+            <option value="vrouw" {{ 'selected' if s.sex == 'vrouw' }}>Vrouw</option>
+          </select>
+          <span class="flabel">Geslacht</span>
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-box">
+          <input name="height_cm" type="number" inputmode="decimal" placeholder=" " value="{{ s.height_cm or '' }}">
+          <span class="flabel">Lengte (cm)</span>
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-box">
+          <input name="weight_kg" type="number" inputmode="decimal" step="0.1" placeholder=" " value="{{ s.weight_kg or '' }}">
+          <span class="flabel">Gewicht (kg)</span>
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-box">
+          <input name="step_goal" type="number" inputmode="numeric" min="1000" step="500" placeholder=" " value="{{ s.step_goal or 10000 }}">
+          <span class="flabel">Stappendoel per dag</span>
+        </span>
+      </label>
+      <label class="field w-full">
+        <span class="field-box">
+          <select name="goal">
+            <option value="afvallen" {{ 'selected' if s.goal == 'afvallen' }}>Afvallen</option>
+            <option value="presteren" {{ 'selected' if s.goal == 'presteren' }}>Presteren</option>
+            <option value="aankomen" {{ 'selected' if s.goal == 'aankomen' }}>Spieren opbouwen</option>
+          </select>
+          <span class="flabel">Doel</span>
+        </span>
+      </label>
+    </div>
+    <div class="card-actions">
+      <button id="btn-save-profile" class="btn">Opslaan</button>
+      <span id="profile-status" class="hint"></span>
+    </div>
+  </form>
+
+  <form class="card col-6" data-reveal onsubmit="return false">
+    <h2 class="card-title">Garmin Connect</h2>
+    <p class="hint card-intro">{% if garmin_lib %}De package <code>garminconnect</code> is geinstalleerd — echte sync mogelijk.{% else %}Voor echte Garmin-sync: <code>python -m pip install garminconnect</code>. Zonder die package werken CSV-import en demodata gewoon.{% endif %}</p>
+    <div class="form-grid">
+      <label class="field w-full">
+        <span class="field-box">
+          <input name="garmin_email" type="email" placeholder=" " autocomplete="off" value="{{ s.garmin_email or '' }}">
+          <span class="flabel">E-mailadres</span>
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-box">
+          <input name="garmin_password" type="password" placeholder=" " autocomplete="new-password" value="{{ s.garmin_password or '' }}">
+          <span class="flabel">Wachtwoord</span>
+        </span>
+      </label>
+      <label class="field">
+        <span class="field-box">
+          <input name="sync_days" type="number" inputmode="numeric" placeholder=" " value="{{ s.sync_days or 7 }}">
+          <span class="flabel">Dagen syncen</span>
+        </span>
+      </label>
+    </div>
+    <div class="card-actions">
+      <button id="btn-garmin-login" class="btn">Verbinden met 2FA</button>
+      <button id="btn-save-garmin" class="btn tonal">Toegang opslaan</button>
+      <button id="btn-sync2" class="btn tonal">Nu syncen</button>
+      <button id="btn-garmin-logout" class="btn danger">Tokens wissen</button>
+    </div>
+    <div id="garmin-login-state" class="hint"></div>
+    <div id="mfa-row" class="mfa-row" hidden>
+      <label class="field">
+        <span class="field-box">
+          <input id="mfa-code" inputmode="numeric" autocomplete="one-time-code" placeholder=" " maxlength="8">
+          <span class="flabel">2FA-code</span>
+        </span>
+      </label>
+      <button id="btn-mfa" class="btn">Bevestigen</button>
+    </div>
+    <p class="hint">Eerste keer: klik op <b>Verbinden met 2FA</b> en voer de code uit je Garmin-app, sms of e-mail in. Je tokens worden daarna lokaal bewaard (<code>data/garmin-tokens</code>), zodat <b>Nu syncen</b> verder zonder 2FA werkt. Het wachtwoord wordt onversleuteld lokaal opgeslagen — alleen op je eigen pc gebruiken.</p>
+  </form>
+
+  <form class="card col-6" data-reveal onsubmit="return false">
+    <h2 class="card-title">CSV-import (Garmin-export)</h2>
+    <p class="hint card-intro">Geen zin in 2FA? Download je data op connect.garmin.com (⚙ → Gegevens exporteren) en import hier de CSV's (stappen, slaap, gewicht, HRV, ...). Kolommen worden automatisch herkend.</p>
+    <div class="file-row">
+      <input type="file" id="csv-files" multiple accept=".csv" hidden>
+      <label class="btn tonal" for="csv-files">CSV's kiezen</label>
+      <span id="csv-name" class="hint"></span>
+    </div>
+    <div class="card-actions">
+      <button id="btn-csv" class="btn">Importeren</button>
+      <span id="csv-status" class="hint"></span>
+    </div>
+  </form>
+
+  <form class="card col-6" data-reveal onsubmit="return false">
+    <h2 class="card-title">Gegevens exporteren</h2>
+    <p class="hint card-intro">Download je opgeslagen data als bestand: metingen (CSV), maaltijden (CSV) of alles samen (JSON-backup, zonder wachtwoord en API-sleutel).</p>
+    <div class="card-actions">
+      <a class="btn tonal" href="/api/export/metrics.csv" download>Metingen (CSV)</a>
+      <a class="btn tonal" href="/api/export/meals.csv" download>Maaltijden (CSV)</a>
+      <a class="btn tonal" href="/api/export/backup.json" download>Backup (JSON)</a>
+    </div>
+  </form>
+
+  <form class="card col-6" data-reveal onsubmit="return false">
+    <h2 class="card-title">AI-advies</h2>
+    <p class="hint card-intro">Kies waar de AI vandaan komt: lokaal via Ollama (privé) of via een OpenAI-compatibele API (OpenAI, OpenRouter, DeepSeek, Groq, ...). Via een API verlaten je gegevens je computer en rekent de aanbieder per gebruik.</p>
+    <div class="form-grid">
+      <label class="field w-full">
+        <span class="field-box">
+          <select name="ai_provider">
+            <option value="ollama" {{ 'selected' if (s.ai_provider or 'ollama') == 'ollama' }}>Lokaal via Ollama</option>
+            <option value="openai_compat" {{ 'selected' if s.ai_provider == 'openai_compat' }}>Cloud-API (OpenAI-compatibel)</option>
+            <option value="gemini" {{ 'selected' if s.ai_provider == 'gemini' }}>Google Gemini</option>
+          </select>
+          <span class="flabel">AI-aanbieder</span>
+        </span>
+      </label>
+      <label class="field w-full" id="f-api-key" {% if (s.ai_provider or 'ollama') == 'ollama' %}hidden{% endif %}>
+        <span class="field-box">
+          <input name="ai_api_key" type="password" placeholder=" " autocomplete="new-password" value="{{ s.ai_api_key or '' }}">
+          <span class="flabel">API-sleutel</span>
+        </span>
+      </label>
+      <label class="field" id="f-api-base" {% if (s.ai_provider or 'ollama') == 'ollama' %}hidden{% endif %}>
+        <span class="field-box">
+          <input name="ai_base_url" type="text" placeholder=" " value="{{ s.ai_base_url or '' }}">
+          <span class="flabel">API-basis-URL</span>
+        </span>
+      </label>
+      <label class="field" id="f-api-model" {% if (s.ai_provider or 'ollama') == 'ollama' %}hidden{% endif %}>
+        <span class="field-box">
+          <input name="ai_model" type="text" placeholder=" " value="{{ s.ai_model or '' }}">
+          <span class="flabel">API-model</span>
+        </span>
+      </label>
+    </div>
+    <p class="hint card-intro" id="ollama-hint" {% if (s.ai_provider or 'ollama') != 'ollama' %}hidden{% endif %}>{% if models %}Ollama is actief — kies het model dat het advies mag schrijven. De AI krijgt je metingen, maaltijden, activiteiten en de berekening van de regelengine. Voor de foto-analyse op de maaltijdenpagina heb je een lokaal vision-model nodig (bijv. <code>ollama pull gemma3</code>).{% else %}Geen Ollama gevonden op 127.0.0.1:11434. Installeer Ollama en draai bijv. <code>ollama pull qwen3:8b</code>, of gebruik hierboven een cloud-API. Zonder AI geeft de regelengine gewoon advies.{% endif %}</p>
+    <label class="field" id="f-ollama-model" {% if (s.ai_provider or 'ollama') != 'ollama' %}hidden{% endif %}>
+      <span class="field-box">
+        <select name="model_advice">
+          <option value="auto" {{ 'selected' if s.model_advice == 'auto' }}>Automatisch (eerste geschikte lokale model)</option>
+          {% for m in models %}<option value="{{ m }}" {{ 'selected' if s.model_advice == m }}>{{ m }}</option>{% endfor %}
+          <option value="uit" {{ 'selected' if s.model_advice == 'uit' }}>Uit — alleen regelengine</option>
+        </select>
+        <span class="flabel">Ollama-model voor advies</span>
+      </span>
+    </label>
+    <div class="card-actions">
+      <button id="btn-save-ai" class="btn">Opslaan</button>
+      <button id="btn-ai-test" class="btn tonal">Testverbinding</button>
+      <span id="ai-status" class="hint"></span>
+    </div>
+    <p class="hint">De AI is voorschrijvend beperkt: onderbouwing met fysiologische mechanismen en gevestigde richtlijnen, zonder verzonnen studies. De API-sleutel wordt onversleuteld lokaal bewaard en niet meegeexporteerd. Advies blijft educatief — geen medisch advies.</p>
+  </form>
+  {% endif %}
+
+  <form class="card col-6" data-reveal onsubmit="return false">
+    <h2 class="card-title">Gebruikers &amp; inloggen</h2>
+    <p class="hint card-intro">Accounts om de app te openen. Bestaat de naam al, dan wordt het wachtwoord vernieuwd. Je eigen account kun je niet verwijderen.</p>
+    <div class="list" id="users-lijst"></div>
+    <div class="form-grid">
+      <label class="field"><span class="field-box"><input id="u-naam" placeholder=" " autocomplete="off"><span class="flabel">Gebruikersnaam</span></span></label>
+      <label class="field"><span class="field-box"><input id="u-wacht" type="password" placeholder=" " autocomplete="new-password"><span class="flabel">Wachtwoord</span></span></label>
+    </div>
+    <div class="card-actions">
+      <button id="btn-user-add" class="btn">Account opslaan</button>
+      <span class="hint" id="users-status"></span>
+    </div>
+    <p class="hint">Ingelogd als <b>{{ session.get('gebruiker') }}</b> · <a href="/uitloggen">uitloggen</a></p>
+  </form>
+
+  {% if not session.get('demo') %}{# gevarenzone: geen demo #}
+  <div class="card col-12 danger-zone" data-reveal>
+    <h2 class="card-title">Gevarenzone</h2>
+    <p class="hint card-intro">Verwijdert alle metingen, maaltijden, activiteiten, adviezen, trainingsschema’s en instellingen (foto’s blijven staan).</p>
+    <div class="card-actions">
+      <button id="btn-reset" class="btn danger">Alles wissen</button>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
