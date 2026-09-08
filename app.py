@@ -20,7 +20,7 @@ from flask import (Flask, Response, jsonify, redirect, render_template,
                    request, send_from_directory, session)
 
 from core import (activity_analysis, advisor, ai_utils, garmin_client,
-                  meal_vision, schema_advisor, store)
+                  health_summary, meal_vision, schema_advisor, store)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
@@ -252,7 +252,8 @@ def dashboard():
                            meals_today=meals_today, totals=totals,
                            latest=store.latest_advice(), last_act=last_act,
                            laatste_sync=_sync_ts_leesbaar(
-                               store.get_setting("last_sync_ok")))
+                               store.get_setting("last_sync_ok")),
+                           samenvatting=health_summary.huidige())
 
 
 @app.route("/meals")
@@ -616,6 +617,10 @@ def api_garmin_sync():
     acts = sum(1 for rec in activities if store.upsert_activity(rec))
     store.set_setting("last_sync", store.now())  # telt mee voor de automatische sync
     store.set_setting("last_sync_ok", store.now())  # alleen bij geslaagde poging
+    try:
+        health_summary.generate()  # AI-analyse bovenaan het dashboard verversen
+    except Exception:
+        pass  # een mislukte samenvatting mag de sync nooit laten falen
     return jsonify({"ok": True, "dagen": dagen, "activiteiten": acts,
                     "voorbeeld": metrics[0] if metrics else None})
 

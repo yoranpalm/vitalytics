@@ -1313,3 +1313,20 @@ input[type="file"][hidden] { display: none; }
   .snackbar { bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--sp-4)); }
   .form-grid { grid-template-columns: 1fr; } /* elk veld op eigen rij: labels lopen nooit vol */
 }
+/* ==========================================================================
+   Dashboard — AI-gezondheidsanalyse
+   ========================================================================== */
+.samenvatting .card-title { flex: 1; margin: 0; }
+/* .grid .accordion herstelt de kaartmarge voor Maaltijden; hier geldt weer
+   de normale grid-gap zoals tussen de andere dashboard-blokken. */
+.grid .samenvatting { margin-bottom: 0; }
+.samenvatting summary { padding: var(--sp-5); }
+.samenvatting .acc-body { padding: 0 var(--sp-5) var(--sp-5); }
+.samenvatting-tekst { margin: 0 0 var(--sp-3); line-height: 1.65; font-size: 15px; }
+.samenvatting-kolommen { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--sp-4); }
+.samenvatting-kolommen ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.samenvatting-kolommen li { line-height: 1.5; }
+.samenvatting-label { display: flex; align-items: center; gap: 6px; font-weight: 700; margin: 0 0 var(--sp-2); }
+.samenvatting-label.goed { color: var(--tertiary); }
+.samenvatting-label.beter { color: var(--primary); }
+.samenvatting-hint { margin-top: var(--sp-4); }
