@@ -7,6 +7,7 @@ De regelengine rekent dezelfde cijfers deterministisch uit (HRV-trend, slaap,
 rust-HF, Mifflin-St Jeor) en dient als fallback en als feitenkader voor de AI."""
 import json
 import statistics
+from datetime import datetime
 
 from . import ai_utils, store
 
@@ -34,6 +35,25 @@ def _f(value):
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def rel_dag(datum, vandaag_date=None):
+    """Anonieme dagnotatie voor cloud-prompts: 'vandaag', 'gisteren', '-3 dagen'.
+   Absolute data zijn op zichzelf quasi-identificeerbaar (startdatum van de
+   app + weekritme). Onbruikbare invoer? Dan de ruwe string."""
+    vandaag_date = vandaag_date or datetime.now().date()
+    try:
+        d = datetime.strptime(str(datum or "")[:10], "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return str(datum or "")[:10]
+    verschil = (vandaag_date - d).days
+    if verschil == 0:
+        return "vandaag"
+    if verschil == 1:
+        return "gisteren"
+    if verschil > 1:
+        return f"-{verschil} dagen"
+    return str(datum)[:10]
 
 
 def compute_context():
@@ -198,25 +218,40 @@ def rule_based(ctx):
 
 # ---------------------------------------------------------- AI-traject
 
-def _data_block(ctx):
+def _data_block(ctx, anoniem=None):
+    """Datablok voor de prompt. Bij een cloudprovider geanonimiseerd: relatieve
+   dagnaam i.p.v. absolute data en het activiteitstype i.p.v. de naam (namen
+   bevatten soms een plaats of werk). Lokale Ollama krijgt alles volledig."""
+    anoniem = ai_utils.use_api() if anoniem is None else anoniem
+    try:
+        vandaag_d = datetime.strptime(ctx.get("today"), "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        vandaag_d = None
     lines = []
     for m in ctx["metrics"][-7:]:
-        lines.append(f"{m['date']}: stappen={m.get('steps')}, rustHF={m.get('resting_hr')}, "
+        dag = rel_dag(m.get("date"), vandaag_d) if anoniem else m.get("date")
+        lines.append(f"{dag}: stappen={m.get('steps')}, rustHF={m.get('resting_hr')}, "
                      f"HRV={m.get('hrv')}, slaap={m.get('sleep_hours')}u, "
                      f"gewicht={m.get('weight')}kg, stress={m.get('stress')}")
     acts = []
     for a in ctx["activities"][:7]:
         dist = f", afstand={a['distance_m'] / 1000:.1f} km" if a.get("distance_m") else ""
-        acts.append(f"{(a.get('start_time') or '')[:10]}: {a.get('name')} "
-                    f"({(a.get('type') or '?').replace('_', ' ')}, {round((a.get('duration_s') or 0) / 60)} min"
-                    f"{dist}, gem-HF={a.get('avg_hr') or '-'}, a\u00ebrand TE={a.get('aerobic_te') or '-'})")
+        typ = (a.get("type") or "?").replace("_", " ")
+        duur = round((a.get("duration_s") or 0) / 60)
+        statline = (f"{duur} min{dist}, gem-HF={a.get('avg_hr') or '-'}, "
+                    f"TE={a.get('aerobic_te') or '-'}")
+        if anoniem:
+            acts.append(f"{rel_dag((a.get('start_time') or '')[:10], vandaag_d)}: {typ}, {statline}")
+        else:
+            acts.append(f"{(a.get('start_time') or '')[:10]}: {a.get('name')} ({typ}, {statline})")
     meals = "; ".join(f"{meal['name']} ({int(meal['kcal'] or 0)} kcal)"
                       for meal in ctx["meals"]) or "nog niets gelogd"
     return "\n".join(lines), meals, "\n".join(acts) or "geen"
 
 
-def llm_advice(model, ctx, fallback):
-    metrics_txt, meals_txt, acts_txt = _data_block(ctx)
+def _prompt(ctx, fallback, anoniem=None):
+    """Prompt opbouwen; anoniem=None volgt de providerkeuze (cloud = anoniem)."""
+    metrics_txt, meals_txt, acts_txt = _data_block(ctx, anoniem)
     p = ctx["profile"]
     definitief = {
         "readiness": fallback["readiness"],
@@ -226,7 +261,7 @@ def llm_advice(model, ctx, fallback):
         "koolhydraten_g": fallback["voeding"]["koolhydraten_g"],
         "vet_g": fallback["voeding"]["vet_g"],
     }
-    prompt = f"""Analyseer onderstaande gezondheids- en trainingsdata en geef onderbouwd advies voor VANDAAG ({ctx['today']}).
+    prompt = f"""Analyseer onderstaande gezondheids- en trainingsdata en geef onderbouwd advies voor VANDAAG.
 
 Profiel: leeftijd={p.get('age') or 'onbekend'}, geslacht={p.get('sex') or 'onbekend'}, lengte={p.get('height_cm') or 'onbekend'} cm, gewicht={p.get('weight_kg') or 'onbekend'} kg, doel={p.get('goal') or 'presteren'}, stappendoel={p.get('step_goal') or 'onbekend'}.
 
@@ -255,6 +290,12 @@ Eisen aan je advies:
 
 Antwoord in het Nederlands, uitsluitend als JSON met exact deze structuur:
 {{"readiness": <0-100>, "training": {{"type": "...", "duur_min": <int>, "intensiteit": "...", "waarom": "<3-5 volledige zinnen, praktisch en in begrijpelijke taal>"}}, "voeding": {{"kcal_doel": <int>, "kcal_over": <int>, "eiwit_g": <int>, "koolhydraten_g": <int>, "vet_g": <int>, "tips": ["<concrete, toepasbare tips>"]}}, "onderbouwing": [{{"onderwerp": "<kort onderwerp>", "uitleg": "<mechanisme of richtlijn, 3-6 zinnen in gewone woorden>"}}], "tips": ["<4-6 concrete coachtips>"], "waarschuwingen": ["..."]}}"""
+
+    return prompt
+
+
+def llm_advice(model, ctx, fallback):
+    prompt = _prompt(ctx, fallback)
     raw, bron = ai_utils.generate(prompt, system=SYSTEM, model=model, temperature=0.5,
                                   timeout=600, num_ctx=16384, num_predict=3072,
                                   json_mode=True)
@@ -280,6 +321,10 @@ Antwoord in het Nederlands, uitsluitend als JSON met exact deze structuur:
         "onderbouwing": onderbouwing,
         "tips": data.get("tips") or fallback["tips"],
         "waarschuwingen": data.get("waarschuwingen") or fallback["waarschuwingen"],
+        # de basis-cijfers zijn niet door de AI bepaald maar komen uit de
+        # metingen — zonder dit blok stond onderaan een advies met alleen
+        # streepjes
+        "basis": fallback.get("basis"),
     }, bron
 
 

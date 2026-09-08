@@ -2,6 +2,7 @@
 OpenAI-compatibel in de cloud, of lokaal Ollama met een vision-model zoals
 llava, llama3.2-vision, qwen2.5vl of gemma3)."""
 import base64
+import io
 
 from . import ai_utils
 
@@ -28,8 +29,24 @@ def pick_vision_model(models):
     return None
 
 
+def _exif_loos(image_bytes):
+    """Foto opnieuw encoderen zonder EXIF-metadata (GPS-coordinaten, toestel,
+   tijdstip): die reizen anders ongemerkt mee naar de cloudprovider. Mislukt
+   het (bijv. zonder Pillow), dan de originele bytes teruggeven."""
+    try:
+        from PIL import Image
+        with Image.open(io.BytesIO(image_bytes)) as img:
+            buf = io.BytesIO()
+            img.convert("RGB").save(buf, "JPEG", quality=88)
+            return buf.getvalue()
+    except Exception:
+        return image_bytes
+
+
 def analyze_photo(image_bytes):
     """Analyseer maaltijdfoto-bytes met AI. Geeft (schattingen, bron) terug."""
+    if ai_utils.use_api():
+        image_bytes = _exif_loos(image_bytes)
     b64 = base64.b64encode(image_bytes).decode("ascii")
     if ai_utils.use_api():
         raw, bron = ai_utils.generate(PROMPT, images=[b64], temperature=0.2,

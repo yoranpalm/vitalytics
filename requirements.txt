@@ -6,3 +6,6 @@ waitress>=3.0
 
 # Garmin Connect-sync (unofficial client)
 garminconnect>=0.3.11
+
+# EXIF-loze herschaling van maaltijdfoto's vóór cloudanalyse
+pillow>=10.0

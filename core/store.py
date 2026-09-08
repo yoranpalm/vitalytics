@@ -70,6 +70,39 @@ def init_db():
                 created_at TEXT);
         """)
 
+        # --- migratie: weekdoelen en schema's koppelen aan een account ---
+        # Bestaande installaties hadden deze tabellen apparaat-breed; de rijen
+        # gaan naar de eerste echte gebruiker (demo telt niet mee). Daarna is
+        # (week, gebruiker) de sleutel.
+        echte = conn.execute("SELECT username FROM users WHERE username != 'demo' "
+                             "ORDER BY id LIMIT 1").fetchone()
+        eigenaar = echte["username"] if echte else None
+        for tabel in ("training_plan", "training_goals", "training_tips"):
+            kolommen = [r["name"] for r in conn.execute(f"PRAGMA table_info({tabel})")]
+            if "gebruiker" not in kolommen:
+                conn.execute(f"ALTER TABLE {tabel} ADD COLUMN gebruiker TEXT NOT NULL DEFAULT ''")
+        if eigenaar:
+            for tabel in ("training_plan", "training_goals", "training_tips"):
+                conn.execute(f"UPDATE {tabel} SET gebruiker = ? WHERE gebruiker = ''",
+                             (eigenaar,))
+        # training_goals en training_tips hadden week als unieke sleutel; per
+        # account moet (week, gebruiker) uniek zijn — tabellen eenmalig herbouwen
+        for tabel in ("training_goals", "training_tips"):
+            info = list(conn.execute(f"PRAGMA table_info({tabel})"))
+            pk = {r["name"] for r in info if r["pk"]}
+            if pk == {"week", "gebruiker"}:
+                continue
+            structuur = {
+                "training_goals": "week TEXT NOT NULL, gebruiker TEXT NOT NULL DEFAULT '', sessions INTEGER NOT NULL",
+                "training_tips": ("week TEXT NOT NULL, gebruiker TEXT NOT NULL DEFAULT '', "
+                                  "created_at TEXT NOT NULL, payload TEXT NOT NULL, source TEXT"),
+            }[tabel]
+            kopie = ", ".join(r["name"] for r in info)
+            conn.execute(f"CREATE TABLE {tabel}_nieuw ({structuur}, PRIMARY KEY (week, gebruiker))")
+            conn.execute(f"INSERT OR IGNORE INTO {tabel}_nieuw SELECT {kopie} FROM {tabel}")
+            conn.execute(f"DROP TABLE {tabel}")
+            conn.execute(f"ALTER TABLE {tabel}_nieuw RENAME TO {tabel}")
+
 
 # ------------------------------------------------------------- instellingen
 
@@ -288,32 +321,34 @@ def verwijder_gebruiker(user_id):
 
 # ------------------------------------------------------- trainingsschema
 
-def get_training_plan(week):
+def get_training_plan(week, gebruiker=""):
     """Schema voor een week: {'week', 'sessions_goal', 'entries': {weekday: {...}}}."""
     with _connect() as conn:
-        goal = conn.execute("SELECT sessions FROM training_goals WHERE week = ?",
-                            (week,)).fetchone()
+        goal = conn.execute("SELECT sessions FROM training_goals WHERE week = ? AND gebruiker = ?",
+                            (week, gebruiker)).fetchone()
         rows = conn.execute(
             "SELECT weekday, sport, minutes FROM training_plan "
-            "WHERE week = ? ORDER BY weekday", (week,)).fetchall()
+            "WHERE week = ? AND gebruiker = ? ORDER BY weekday", (week, gebruiker)).fetchall()
     return {"week": week,
             "sessions_goal": goal["sessions"] if goal else None,
             "entries": {r["weekday"]: {"sport": r["sport"], "minutes": r["minutes"]}
                         for r in rows}}
 
 
-def save_training_plan(week, sessions_goal, entries):
-    """Vervang het schema van een week volledig. Ongeldige regels worden gedempt
-    overgeslagen (geen sport, geen minuten of onbekende dag)."""
+def save_training_plan(week, sessions_goal, entries, gebruiker=""):
+    """Vervang het schema van een week volledig voor dit account. Ongeldige regels
+    worden gedempt overgeslagen (geen sport, geen minuten of onbekende dag)."""
     with _LOCK, _connect() as conn:
         if sessions_goal is None:
-            conn.execute("DELETE FROM training_goals WHERE week = ?", (week,))
+            conn.execute("DELETE FROM training_goals WHERE week = ? AND gebruiker = ?",
+                         (week, gebruiker))
         else:
             conn.execute(
-                "INSERT INTO training_goals (week, sessions) VALUES (?, ?) "
-                "ON CONFLICT(week) DO UPDATE SET sessions = excluded.sessions",
-                (week, int(sessions_goal)))
-        conn.execute("DELETE FROM training_plan WHERE week = ?", (week,))
+                "INSERT INTO training_goals (week, gebruiker, sessions) VALUES (?, ?, ?) "
+                "ON CONFLICT(week, gebruiker) DO UPDATE SET sessions = excluded.sessions",
+                (week, gebruiker, int(sessions_goal)))
+        conn.execute("DELETE FROM training_plan WHERE week = ? AND gebruiker = ?",
+                     (week, gebruiker))
         saved = 0
         for entry in entries:
             try:
@@ -325,17 +360,17 @@ def save_training_plan(week, sessions_goal, entries):
             if not sport or not 1 <= weekday <= 7 or minutes <= 0 or minutes > 600:
                 continue
             conn.execute(
-                "INSERT INTO training_plan (week, weekday, sport, minutes) "
-                "VALUES (?, ?, ?, ?)", (week, weekday, sport, minutes))
+                "INSERT INTO training_plan (week, gebruiker, weekday, sport, minutes) "
+                "VALUES (?, ?, ?, ?, ?)", (week, gebruiker, weekday, sport, minutes))
             saved += 1
     return saved
 
 
-def get_training_tips(week):
+def get_training_tips(week, gebruiker=""):
     """Opgeslagen AI-advies bij het weekschema (of None)."""
     with _connect() as conn:
-        row = conn.execute("SELECT * FROM training_tips WHERE week = ?",
-                           (week,)).fetchone()
+        row = conn.execute("SELECT * FROM training_tips WHERE week = ? AND gebruiker = ?",
+                           (week, gebruiker)).fetchone()
     if not row:
         return None
     try:
@@ -346,14 +381,14 @@ def get_training_tips(week):
             "payload": payload if isinstance(payload, dict) else {}}
 
 
-def save_training_tips(week, payload, source):
+def save_training_tips(week, payload, source, gebruiker=""):
     with _LOCK, _connect() as conn:
         conn.execute(
-            "INSERT INTO training_tips (week, created_at, payload, source) "
-            "VALUES (?, ?, ?, ?) "
-            "ON CONFLICT(week) DO UPDATE SET created_at = excluded.created_at, "
+            "INSERT INTO training_tips (week, gebruiker, created_at, payload, source) "
+            "VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(week, gebruiker) DO UPDATE SET created_at = excluded.created_at, "
             "payload = excluded.payload, source = excluded.source",
-            (week, now(), json.dumps(payload, ensure_ascii=False), source))
+            (week, gebruiker, now(), json.dumps(payload, ensure_ascii=False), source))
 
 
 # ------------------------------------------------------------- advies

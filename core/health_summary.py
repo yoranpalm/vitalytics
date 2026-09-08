@@ -20,8 +20,9 @@ def huidige():
     return data if isinstance(data, dict) and data.get("samenvatting") else None
 
 
-def _maaltijd_blok():
-    """Maaltijden per dag (laatste 7 gelogde dagen) als leesbare regels."""
+def _maaltijd_blok(anoniem=False):
+    """Maaltijden per dag (laatste 7 gelogde dagen) als leesbare regels; bij een
+   cloudprovider met relatieve dagnaam i.p.v. absolute data."""
     dagen = {}
     for m in store.get_meals(300):
         dag = (m.get("ts") or "")[:10]
@@ -37,17 +38,20 @@ def _maaltijd_blok():
     regels = []
     for dag in sorted(dagen)[-7:]:
         d = dagen[dag]
-        regels.append(f"{dag}: {'; '.join(d['items'][:6])} - dagtotaal "
+        label = advisor.rel_dag(dag) if anoniem else dag
+        regels.append(f"{label}: {'; '.join(d['items'][:6])} - dagtotaal "
                       f"{int(d['kcal'])} kcal (E{int(d['protein'])} "
                       f"K{int(d['carbs'])} V{int(d['fat'])})")
     return "\n".join(regels) or "geen maaltijden gelogd"
 
 
-def _data_blok(ctx):
-    """Alle relevante data (metingen, activiteiten, profiel) als prompttekst."""
+def _data_blok(ctx, anoniem=False):
+    """Alle relevante data (metingen, activiteiten, profiel) als prompttekst;
+   bij een cloudprovider geanonimiseerd (relatieve data, type i.p.v. naam)."""
     regels = []
     for m in ctx["metrics"][-14:]:
-        regels.append(f"{m['date']}: stappen={m.get('steps')}, rustHF={m.get('resting_hr')}, "
+        dag = advisor.rel_dag(m.get("date")) if anoniem else m.get("date")
+        regels.append(f"{dag}: stappen={m.get('steps')}, rustHF={m.get('resting_hr')}, "
                       f"HRV={m.get('hrv')}, slaap={m.get('sleep_hours')}u, "
                       f"gewicht={m.get('weight')}kg, stress={m.get('stress')}")
     metingen = "\n".join(regels) or "geen metingen"
@@ -55,9 +59,13 @@ def _data_blok(ctx):
     acts = []
     for a in store.get_activities(10):
         dist = f", {a['distance_m'] / 1000:.1f} km" if a.get("distance_m") else ""
-        acts.append(f"{(a.get('start_time') or '')[:10]}: {a.get('name')} "
-                    f"({(a.get('type') or '?').replace('_', ' ')}, "
-                    f"{round((a.get('duration_s') or 0) / 60)} min{dist})")
+        typ = (a.get("type") or "?").replace("_", " ")
+        duur = round((a.get("duration_s") or 0) / 60)
+        dag = advisor.rel_dag((a.get("start_time") or "")[:10]) if anoniem else (a.get("start_time") or "")[:10]
+        if anoniem:
+            acts.append(f"{dag}: {typ}, {duur} min{dist}")
+        else:
+            acts.append(f"{dag}: {a.get('name')} ({typ}, {duur} min{dist})")
     activiteiten = "\n".join(acts) or "geen"
 
     p = ctx["profile"]
@@ -120,7 +128,7 @@ def _fallback(ctx):
 
 
 PROMPT = """Analyseer de gezondheids- en voedingsdata hieronder en geef een korte,
-persoonlijke analyse voor VANDAAG ({datum}).
+persoonlijke analyse voor VANDAAG.
 
 Profiel: {profiel}
 
@@ -168,10 +176,11 @@ def generate():
     payload, bron = fallback, "Automatische analyse"
 
     if store.get_setting("model_advice") != "uit":
-        metingen, activiteiten, profiel = _data_blok(ctx)
+        anoniem = ai_utils.use_api()
+        metingen, activiteiten, profiel = _data_blok(ctx, anoniem)
         prompt = PROMPT.format(
-            datum=ctx["today"], profiel=profiel, metingen=metingen,
-            activiteiten=activiteiten, maaltijden=_maaltijd_blok(),
+            profiel=profiel, metingen=metingen,
+            activiteiten=activiteiten, maaltijden=_maaltijd_blok(anoniem),
             stappen=ctx.get("steps_avg"), rhr=ctx.get("rhr_avg"),
             slaap=ctx.get("sleep_avg"), hrv=ctx.get("hrv_avg"),
             hrv_basis=ctx.get("hrv_baseline"), kcal_avg=ctx.get("kcal_avg_7d"))

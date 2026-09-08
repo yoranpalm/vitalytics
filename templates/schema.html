@@ -8,7 +8,7 @@
     <p class="page-sub">Plan per week op welke dagen je wilt sporten, hoe lang en wat.</p>
   </div>
   <div class="header-actions week-switch">
-    {% if not meta.is_current %}<a class="btn text small" href="/schema">Deze week</a>{% endif %}
+    {% if not meta.is_current %}<a class="btn text small deze-week" href="/schema">Deze week</a>{% endif %}
     <a class="btn tonal arrow" href="/schema?week={{ meta.prev }}" aria-label="Vorige week" title="Vorige week">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
     </a>
@@ -28,11 +28,14 @@
       <div class="card-head">
         <h2 class="card-title">Jouw week</h2>
         <div class="schema-goal">
-          <label for="schema-goal">Weekdoel</label>
-          <input type="number" id="schema-goal" min="1" max="14" step="1"
-                 value="{{ plan.sessions_goal if plan.sessions_goal else '' }}"
-                 placeholder="3" aria-label="Gewenste trainingen per week">
-          <span class="hint">keer per week</span>
+          <span class="hint">Weekdoel</span>
+          <input type="hidden" id="schema-goal" value="{{ plan.sessions_goal if plan.sessions_goal else '' }}">
+          <div class="doel-chips" role="group" aria-label="Weekdoel: trainingen per week">
+            {% for n in range(1, 8) %}
+            <button type="button" class="doel-chip{{ ' actief' if (plan.sessions_goal or 0) == n }}"
+                    data-doel="{{ n }}" aria-pressed="{{ 'true' if (plan.sessions_goal or 0) == n else 'false' }}">{{ n }}</button>
+            {% endfor %}
+          </div>
         </div>
       </div>
       <div class="schema-days">
@@ -46,9 +49,12 @@
             <option value="{{ s }}" {{ 'selected' if entry and entry.sport == s }}>{{ s }}</option>
             {% endfor %}
           </select>
-          <input type="number" min="5" max="600" step="5" placeholder="min"
-                 aria-label="Minuten op {{ day }}"
-                 value="{{ entry.minutes if entry else '' }}">
+          <div class="min-veld">
+            <input type="number" min="5" max="600" step="5" inputmode="numeric"
+                   aria-label="Minuten op {{ day }}"
+                   value="{{ entry.minutes if entry else '' }}">
+            <span class="min-suffix">min.</span>
+          </div>
         </div>
         {% endfor %}
       </div>

@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 
 from flask import (Flask, Response, jsonify, redirect, render_template,
                    request, send_from_directory, session)
+from markupsafe import Markup
 
 from core import (activity_analysis, advisor, ai_utils, garmin_client,
                   health_summary, meal_vision, schema_advisor, store)
@@ -265,6 +266,7 @@ def meals():
         dag = (m.get("ts") or vandaag)[:10]
         if not dagen or dagen[-1]["datum"] != dag:
             dagen.append({"datum": dag, "label": _dag_label(dag, vandaag),
+                          "label_kort": _dag_label_kort(dag, vandaag),
                           "maaltijden": [],
                           "totaal": {"kcal": 0, "protein": 0, "carbs": 0, "fat": 0}})
         g = dagen[-1]
@@ -291,6 +293,21 @@ def _dag_label(dag, vandaag):
     if d.year != datetime.now().year:
         label += f" {d.year}"
     return label
+
+
+def _dag_label_kort(dag, vandaag):
+    """Korte dagkop voor mobiel: 'Vandaag', 'Gisteren' of 'di 08-09'."""
+    if dag == vandaag:
+        return "Vandaag"
+    gisteren = (datetime.strptime(vandaag, "%Y-%m-%d")
+                 - timedelta(days=1)).strftime("%Y-%m-%d")
+    if dag == gisteren:
+        return "Gisteren"
+    try:
+        d = datetime.strptime(dag, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        return dag
+    return f"{MEAL_DAGEN[d.weekday()][:2]} {d.day:02d}-{d.month:02d}"
 
 
 def _meal_ts(datum):
@@ -362,12 +379,18 @@ def _filter_datum(waarde):
 
 @app.template_filter("datum_tijd")
 def _filter_datum_tijd(waarde):
-    """Datum + tijd: '7 september 2026 · 16:59'."""
+    """Datum + tijd in twee varianten: lang '7 september 2026 · 16:59' en kort
+    '07-09-2026 · 16:59' — CSS toont op telefoons de korte (mobiel-only kan
+    geen Jinja, dus beide renderen en per breakpoint tonen)."""
     try:
         d = datetime.strptime((str(waarde or ""))[:16], "%Y-%m-%d %H:%M")
     except (TypeError, ValueError):
         return str(waarde or "")
-    return f"{d.day} {SCHEMA_MONTHS[d.month - 1]} {d.year} · {d.hour:02d}:{d.minute:02d}"
+    lang = f"{d.day} {SCHEMA_MONTHS[d.month - 1]} {d.year}"
+    kort = f"{d.day:02d}-{d.month:02d}-{d.year}"
+    return Markup(f'<span class="datum-lang">{lang}</span>'
+                  f'<span class="datum-kort">{kort}</span>'
+                  f" · {d.hour:02d}:{d.minute:02d}")
 
 
 def _week_key(day):
@@ -440,8 +463,9 @@ def schema_page():
     week = request.args.get("week") or _week_key(datetime.now().date())
     if not _parse_week(week):
         week = _week_key(datetime.now().date())
-    plan = store.get_training_plan(week)
-    tips = store.get_training_tips(plan["week"])
+    gebruiker = session.get("gebruiker") or ""
+    plan = store.get_training_plan(week, gebruiker)
+    tips = store.get_training_tips(plan["week"], gebruiker)
     meta = schema_week_meta(week)
     return render_template("schema.html", plan=plan, days=SCHEMA_DAYS,
                            meta=meta, tips=tips,
@@ -462,7 +486,7 @@ def api_schema_save():
     if goal is not None and not 0 <= goal <= 21:
         goal = None
     entries = data.get("entries") if isinstance(data.get("entries"), list) else []
-    saved = store.save_training_plan(week, goal, entries)
+    saved = store.save_training_plan(week, goal, entries, session.get("gebruiker") or "")
     return jsonify({"ok": True, "week": week, "opgeslagen": saved})
 
 
@@ -474,10 +498,10 @@ def api_schema_advice():
     if not _parse_week(week):
         return jsonify({"error": "Onbekende week"}), 400
     try:
-        payload, source = schema_advisor.generate(week)
+        payload, source = schema_advisor.generate(week, session.get("gebruiker") or "")
     except Exception as exc:
         return jsonify({"error": f"AI-advies mislukt: {exc}"}), 503
-    store.save_training_tips(week, payload, source)
+    store.save_training_tips(week, payload, source, session.get("gebruiker") or "")
     return jsonify({"ok": True, "week": week})
 
 
@@ -959,16 +983,20 @@ def _cards(metrics):
     steps_row = _latest_row(metrics, "steps")
     if steps_row:
         hint_bits = []
+        pct = None
         if goal > 0:
             pct = round(steps_row["steps"] / goal * 100)
             hint_bits.append(f"{pct}% van dagdoel {goal:,}".replace(",", "."))
         avg = _avg(metrics, "steps")
         if avg:
             hint_bits.append(f"7-daags gem. {avg:,}".replace(",", "."))
-        cards.append({"label": "Stappen",
-                      "value": f"{steps_row['steps']:,}".replace(",", "."),
-                      "unit": "stappen", "spark": _spark(metrics, "steps"),
-                      "hint": " · ".join(hint_bits)})
+        kaart = {"label": "Stappen",
+                 "value": f"{steps_row['steps']:,}".replace(",", "."),
+                 "unit": "stappen",
+                 "hint": " · ".join(hint_bits)}
+        if pct is not None:
+            kaart["doel_pct"] = max(0, min(100, pct))
+        cards.append(kaart)
 
     rhr_row = _latest_row(metrics, "resting_hr")
     if rhr_row:

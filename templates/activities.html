@@ -88,7 +88,7 @@
         <span class="list-sub">{{ an.type_label }} · {{ a.start_time|datum_tijd }} · {{ an.duur }} · {{ an.afstand }}</span>
       </span>
       {% if an.te_label and an.te_label != '–' %}
-      <span class="chip tonal" title="Trainingsbelasting (aëroob effect)">{{ an.te_label }}</span>
+      <span class="chip tonal te-chip" title="Trainingsbelasting (aëroob effect)">{{ an.te_label }}</span>
       {% endif %}
       {% if a.source == 'demo' %}<span class="chip">demo</span>{% endif %}
       <svg class="chev chev-right" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -104,7 +104,7 @@
           </div>
           <div class="act-chips">
             {% if an.te_label and an.te_label != '–' %}
-            <span class="chip tonal" title="Trainingsbelasting (aëroob effect)">{{ an.te_label }}</span>
+            <span class="chip tonal te-chip" title="Trainingsbelasting (aëroob effect)">{{ an.te_label }}</span>
             {% endif %}
             {% if a.source == 'demo' %}<span class="chip">demo</span>{% endif %}
           </div>

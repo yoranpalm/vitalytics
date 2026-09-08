@@ -359,6 +359,8 @@ form.card .card-actions ~ .hint { margin-top: var(--sp-3); }
 /* invoerwijze: handmatig of AI-schatting (M3 segmented buttons) */
 .segmented {
   display: inline-flex;
+  vertical-align: top; /* geen lijn-box-marge onderaan: zonder dit zit er
+   ~5px extra lucht onder het element (strut-descent van de tekstregel) */
   border: 1px solid var(--outline-variant);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -519,6 +521,9 @@ form.card .card-actions ~ .hint { margin-top: var(--sp-3); }
 .metric-label { margin: 0; font-size: var(--fs-14); font-weight: 500; color: var(--on-surface-variant); }
 .metric-value { margin: var(--sp-1) 0 0; font-size: var(--fs-24); font-weight: 500; line-height: 32px; }
 .metric-unit { font-size: var(--fs-12); font-weight: 400; color: var(--on-surface-variant); }
+/* de dunne voortgangsbalk in de metingkaarten krijgt extra ademruimte
+   (vergelijkbaar met de hoogte die de sparkline daar had) */
+.metric .progress { margin: var(--sp-3) 0; }
 
 /* -- knoppen (M3: filled / tonal / text / icon) -- */
 .btn {
@@ -828,10 +833,12 @@ input[type="file"][hidden] { display: none; }
   z-index: 60;
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
+  justify-content: center;
+  gap: var(--sp-2);
+  width: max-content;      /* zo breed als de tekst, ook op mobiel en desktop */
   min-height: 48px;
   max-width: min(90vw, 560px);
-  padding: 10px var(--sp-4);
+  padding: 10px var(--sp-3);
   border-radius: var(--radius-xs);
   background: var(--inverse-surface);
   color: var(--inverse-on-surface);
@@ -1017,8 +1024,10 @@ input[type="file"][hidden] { display: none; }
   .js .mfa-row:not([hidden]) { animation: none; }
   .nav-item .nav-icon { transition: none; }
   .nav-item:hover .nav-icon { transform: none; }
+  .nav-item:active .nav-icon { transform: none; }
   .snackbar, .snackbar.show { transition: none; }
   .login-fout { animation: none; }
+  .main.page-uit { transition: none; opacity: 1; transform: none; }
 }
 
 /* -- trainingsschema -- */
@@ -1036,20 +1045,29 @@ input[type="file"][hidden] { display: none; }
 .week-switch .arrow { width: 40px; padding: 0; flex: none; }
 .week-switch .btn.text { flex: none; }
 
-.schema-goal { display: flex; align-items: center; gap: var(--sp-2); }
+.schema-goal { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .schema-goal .hint { margin-top: 0; }
-.schema-goal label { font-size: var(--fs-14); color: var(--on-surface-variant); }
-.schema-goal input {
-  width: 72px;
-  height: 40px;
-  padding: 0 10px;
+/* weekdoel als tikbare chipjes 1-7 i.p.v. een invulveld */
+.doel-chips { display: inline-flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; }
+.doel-chip {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 var(--sp-2);
   border: 1px solid var(--outline-variant);
   border-radius: var(--radius-full);
   background: var(--field-bg);
-  color: var(--on-surface);
+  color: var(--on-surface-variant);
   font: inherit;
-  font-size: var(--fs-16);
-  text-align: center;
+  font-size: var(--fs-14);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.doel-chip:hover { background: var(--state-hover); }
+.doel-chip.actief {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
 }
 
 .schema-days { display: flex; flex-direction: column; gap: var(--sp-1); }
@@ -1108,6 +1126,18 @@ input[type="file"][hidden] { display: none; }
 .schema-row input:focus {
   outline: none;
   border-color: var(--primary);
+}
+/* minuten-veld met vaste eenheid: 'min.' staat altijd rechts in het veld */
+.min-veld { position: relative; width: 100%; }
+.schema-row .min-veld input { padding-right: 38px; }
+.min-suffix {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--fs-12);
+  color: var(--on-surface-variant);
+  pointer-events: none;
 }
 @media (max-width: 559px) {
   .schema-row { grid-template-columns: 56px 1fr 84px; }
@@ -1247,9 +1277,17 @@ input[type="file"][hidden] { display: none; }
 @media (max-width: 559px) {
   .page { padding: var(--sp-4) var(--sp-4) var(--sp-8); }
   .card { padding: var(--sp-4); }
+  /* accordions laten summary/acc-body de padding leveren — zonder deze regel
+     wint .card hierboven (zelfde specificiteit, later in het bestand) en
+     komt de padding dubbel (16px kaart + 16px summary) */
+  .card.accordion { padding: 0; }
+  .card.empty { padding: var(--sp-6) var(--sp-4); }
   .modal { padding: var(--sp-4); }
-  .accordion summary { padding: var(--sp-3) var(--sp-4); }
-  .acc-body { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+  .accordion summary { padding: var(--sp-4); }
+  .acc-body { padding: 0 var(--sp-4) var(--sp-4); }
+  /* dag-accordions en advieskaarten zijn inhoudsrijke kaarten: met alleen de
+   8px grid-gap zit uitgeklapte inhoud klem tegen de volgende kaart */
+  .advice-col .card { margin-bottom: var(--sp-4); }
   .tip-day-body { padding: var(--sp-1) 0 var(--sp-3); }
   .mfa-row { flex-wrap: wrap; }
   .mfa-row .field { width: 100%; }
@@ -1258,60 +1296,149 @@ input[type="file"][hidden] { display: none; }
   /* compacte dagenrij; "vandaag" is een dotje vóór de dagletter, dat past
      ook in de smalle dagkolom */
   .schema-row { grid-template-columns: 56px 1fr 84px; }
+  /* schemavelden ogen elders groot: geen zwevend label + dichte 4px-stapel.
+   Wat smaller (44px) en een krappe stapel (4px) zodat het page-gevoel matcht
+   met de field-boxen van andere pagina's (technisch ook 48px) */
+  .schema-row select,
+  .schema-row input[type="number"] { height: 44px; }
+  .schema-days { gap: var(--sp-1); }
 }
 
-/* -- telefoons (<=767px): navigatie onderaan zoals in mobiele apps.
-   Dit blok staat bewust aan het einde van het bestand: het moet de
-   kleinere-schermen-regels hierboven (o.a. .page-padding) overschrijven,
+/* -- telefoons (<=767px): zwevende pil-balk onderaan (M3 Expressive, zoals
+   Google Photos die in 2026 uitrolde): los van de schermranden zodat content
+   eronder en ernaast zichtbaar blijft, volledig rond, met een pil-markering
+   om het actieve item. Dit blok staat bewust laat in het bestand: het moet
+   de kleinere-schermen-regels hierboven (o.a. .page-padding) overschrijven,
    anders verdwijnt de onderkant van pagina's achter de balk. -- */
 @media (max-width: 767px) {
-  :root { --bottomnav-h: 66px; }
+  :root { --bottomnav-h: 52px; }
   .drawer {
     top: auto;
-    right: 0;
-    width: 100%;
-    height: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px));
-    padding: var(--sp-1) var(--sp-1) calc(var(--sp-1) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+    /* iets smaller dan de content (24px i.p.v. 16px zijkant) zodat de iconen
+       wat meer op elkaar zitten */
+    left: var(--sp-6);
+    right: var(--sp-6);
+    width: auto;
+    height: var(--bottomnav-h);
+    padding: var(--sp-1);
     flex-direction: row;
     align-items: stretch;
-    border-top: 1px solid var(--outline-variant);
+    border: none;
+    border-radius: var(--radius-full);
+    /* subtiel: maar een hint merktint bovenop de witte/donkere basis —
+       duidelijk aanwezig zonder te schreeuwen; glass-blur blijft aan */
+    background: color-mix(in srgb, var(--secondary-container) 40%, var(--surface-container-lowest));
+    background: color-mix(in srgb, color-mix(in srgb, var(--secondary-container) 40%, var(--surface-container-lowest)) 88%, transparent);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--elev-2);
+  }
+  @media (prefers-color-scheme: dark) {
+    .drawer {
+      background: color-mix(in srgb, var(--secondary-container) 40%, var(--surface-container));
+      background: color-mix(in srgb, color-mix(in srgb, var(--secondary-container) 40%, var(--surface-container)) 90%, transparent);
+    }
+  }
+  @media (min-width: 560px) {
+    .drawer { left: var(--sp-6); right: var(--sp-6); }
   }
   .drawer-brand, .drawer-foot { display: none; }
-  .drawer-nav { flex-direction: row; gap: 0; width: 100%; }
+  .drawer-nav { flex-direction: row; gap: 0; width: 100%; align-items: center; }
+  /* alleen iconen: de labels blijven in de DOM (toegankelijke namen voor
+     screenreaders) maar zijn visueel verborgen */
   .nav-item {
+    position: relative;
     flex: 1 1 0;
-    width: auto;
-    height: auto;
-    min-height: 56px;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    padding: var(--sp-1) 0;
-    border-radius: var(--radius-xs);
+    min-width: 0;
+    height: 40px;
+    padding: 0;
+    border-radius: var(--radius-full);
     font-size: 10px;
     line-height: 12px;
   }
+  /* iconen wat groter dan op de desktop-rail: zonder labels mogen ze het
+   voortouw nemen (svg-attributen worden door CSS-width/height overschreven) */
+  .nav-icon, .nav-icon svg { width: 28px; height: 28px; }
   .nav-label {
-    display: block;
-    max-width: 100%;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
+    clip: rect(0 0 0 0);
     white-space: nowrap;
   }
-  .nav-item.active { background: transparent; color: var(--primary); }
-  .nav-item.active .nav-icon {
-    width: min(56px, 100%);
-    height: 30px;
-    border-radius: var(--radius-full);
-    background: var(--secondary-container);
-    color: var(--on-secondary-container);
-  }
+  /* actieve bestemming: gevulde pil in de merkkleur — sterkst onderscheidend
+   (donker thema: tokens draaien automatisch mee naar lichtblauw op donker) */
+  .nav-item.active { background: var(--primary); color: var(--on-primary); margin-inline: 2px; }
+  /* speelse M3-Expressive tap: het icoon veert kort in bij het aanraken */
+  .nav-item .nav-icon { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .nav-item:active .nav-icon { transform: scale(0.88); }
   .main { margin-left: 0; }
   .page { padding: var(--sp-4) var(--sp-4) calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--sp-8)); }
+  /* onderaan elke pagina exact dezelfde ruimte: de page-padding is de enige
+   bodemruimte — het laatste element (laatste kaart, sluitende hint) stapelt
+   geen eigen marge meer op de padding. :not(dialog) want het verborgen
+   detailvenster is op sommige pagina's het formele laatste element */
+  .page > .card,
+  .page > :last-child:not(dialog) { margin-bottom: 0; }
+  .grid > .accordion:last-child { margin-bottom: 0; }
+  /* trainingsbelasting-chip (TE) bij activiteiten: op telefoons te druk voor
+   de rijen; de score staat in de detailweergave van de desktop wel */
+  .te-chip { display: none; }
+  .advice-col .chip { display: none; }
+  /* adviespagina: bronlabel (welk model) weg op mobiel — in de kaartkop van
+   het nieuwste advies drukte hij de verwijderknop onder de datum; in de
+   accordions gold dat al voor de smalle schermen */
+  .advice-col .chip { display: none; }
+  /* weekdoel op mobiel tot maximaal 5 trainingen (chipjes 6 en 7 bestaan
+   alleen op grotere schermen); 'Weekdoel' links, chipjes rechts, op één regel
+   onder de kaarttitel */
+  .doel-chip:nth-child(n + 6) { display: none; }
+  .schema-goal {
+    width: 100%;
+    margin-left: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+  }
+  /* trainingsschema: weekwissel over de volle breedte als een datumpicker-rij
+   (pijl - week - pijl), 'Deze week' weg — je ziet weeknummer en bereik */
+  .page-header:has(.week-switch) .header-actions { flex: 1 1 100%; }
+  .week-switch { display: flex; align-items: center; width: 100%; gap: var(--sp-2); }
+  .week-switch .week-label { flex: 1; min-width: 0; }
+  .deze-week { display: none; }
+  /* lijsten overal gelijk op mobiel (activiteiten, maaltijden, gebruikers):
+   titel 15px, rijen 8px verticale padding; de activiteitensub-regel blijft op
+   één regel met puntjes zodat content nooit boven het icoon uitsteekt */
+  .list-head { font-size: var(--fs-14); line-height: 20px; }
+  .act-row .list-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list .list-item { padding-block: var(--sp-2); }
+  /* rijen mét actieknoppen (maaltijden: bewerken/verwijderen) kunnen niet zo
+   krap als tekstrijen — de knoppen van opeenvolgende rijen kwamen anders
+   te dicht op elkaar. Expliciete class i.p.v. :has() zodat ook oudere
+   browsers de ruimte toepassen */
+  .list-acties .list-item { padding-block: var(--sp-3); }
+  .act-list { gap: var(--sp-1); }
   .sticky { position: static; }
-  .snackbar { bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--sp-4)); }
-  .form-grid { grid-template-columns: 1fr; } /* elk veld op eigen rij: labels lopen nooit vol */
+  /* toastmelding: gecentreerd en zo breed als de tekst zelf (binnen de
+   marges), tekst horizontaal én verticaal gecentreerd t.o.v. het icoon */
+  .snackbar {
+    left: 50%;
+    right: auto;
+    max-width: min(calc(100vw - 32px), 560px);
+    transform: translate(-50%, 16px);
+  }
+  .snackbar.show { transform: translate(-50%, 0); }
+  .snackbar { bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--sp-8)); }
+  /* formulieren op mobiel: iets meer lucht tussen gestapelde velden —
+   een kolom van opeenvolgende pills oogt anders dichter dan het
+   tweecolumns-schema op desktop */
+  .form-grid { grid-template-columns: 1fr; gap: var(--sp-4); }
 }
 /* ==========================================================================
    Dashboard — AI-gezondheidsanalyse
@@ -1323,10 +1450,102 @@ input[type="file"][hidden] { display: none; }
 .samenvatting summary { padding: var(--sp-5); }
 .samenvatting .acc-body { padding: 0 var(--sp-5) var(--sp-5); }
 .samenvatting-tekst { margin: 0 0 var(--sp-3); line-height: 1.65; font-size: 15px; }
-.samenvatting-kolommen { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--sp-4); }
+.samenvatting-kolommen { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: var(--sp-4); }
 .samenvatting-kolommen ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
 .samenvatting-kolommen li { line-height: 1.5; }
 .samenvatting-label { display: flex; align-items: center; gap: 6px; font-weight: 700; margin: 0 0 var(--sp-2); }
 .samenvatting-label.goed { color: var(--tertiary); }
 .samenvatting-label.beter { color: var(--primary); }
 .samenvatting-hint { margin-top: var(--sp-4); }
+/* de bronchip kan lange tekst bevatten (fallback "AI onbeschikbaar: ..."): 
+   afkappen i.p.v. de kop uit elkaar te drukken */
+.samenvatting .bron-chip {
+  min-width: 0;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -- gezondheidsanalyse op telefoons: zelfde paddings als de andere kaarten.
+   Deze regels moeten ná de samenvatting-stijlen staan (die anders met hun
+   hogere/zelfde specificiteit gewoon winnen van de compacte media query
+   eerder in dit bestand). -- */
+@media (max-width: 559px) {
+  .samenvatting summary { padding: var(--sp-4); }
+  .samenvatting .acc-body { padding: 0 var(--sp-4) var(--sp-4); }
+}
+
+/* -- telefoons: model-label van de gezondheidsanalyse weg (past niet zinvol
+   in de smalle kop en is detailinformatie) -- */
+@media (max-width: 767px) {
+  .samenvatting .bron-chip { display: none; }
+}
+
+/* -- telefoons: iets grotere typografie. De font-stappen worden opgehoogd;
+   regelafstanden die in pixels vaststaan gaan mee. Invoervelden blijven
+   >= 16px, dus iOS zoomt niet meer bij focus. -- */
+@media (max-width: 767px) {
+  :root {
+    --fs-11: 12px;
+    --fs-12: 13px;
+    --fs-14: 15px;
+    --fs-16: 17px;
+    --fs-20: 22px;
+    --fs-24: 26px;
+    --fs-40: 44px;
+  }
+  body { line-height: 22px; }
+  .headline { line-height: 34px; }
+  .card-title { line-height: 26px; }
+  /* kop-ruimte gelijk aan de veldafstand (16px): titel → inhoud ademt even
+   breed als de onderlinge afstanden, op élke kaart (zowel kale titels als
+   card-heads) */
+  .card-title { margin-bottom: var(--sp-4); }
+  .card-head { margin-bottom: var(--sp-4); }
+  .hint { line-height: 18px; }
+  .metric-value { line-height: 34px; }
+  .act-datum { line-height: 18px; }
+  .analysis li { line-height: 22px; }
+  .samenvatting-tekst { font-size: 16px; }
+}
+
+/* -- paginawissel: het contentgebied fadt kort weg bij het klikken op een
+   interne link (app.js voegt de class toe en navigeert daarna pas); de
+   navigatiebalk zit buiten .main en blijft dus staan. De binnenkomst doen de
+   bestaande data-reveal intro's. Dit werkt in elke browser en bij elk
+   navigatietype — cross-document View Transitions sloeg Chrome/Safari
+   namelijk over bij oa. terug-navigatie uit de bfcache. -- */
+.main.page-uit {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+/* -- datums: op telefoons numeriek (08-09-2026) i.p.v. maand voluit --
+   Het datum_tijd-filter en de maaltijddagkoppen renderen beide varianten;
+   CSS kiest per breakpoint. */
+.datum-kort { display: none; }
+@media (max-width: 767px) {
+  .datum-lang { display: none; }
+  .datum-kort { display: inline; }
+}
+
+/* -- advieshistorie op telefoons: de koprij (datum + readyheid + bron +
+   verwijder + pijltje) past niet naast elkaar op een smal scherm; door de
+   overflow:hidden van de accordion verdween de verwijderknop deels uit beeld.
+   Readyheid en bron staan gewoon in de geopende inhoud; op de koprij blijven
+   datum + acties over. -- */
+@media (max-width: 559px) {
+  .advice-col .accordion summary { gap: var(--sp-2); }
+  .advice-col .accordion .acc-meta { display: none; }
+  .advice-col .accordion .del-advice { width: 36px; height: 36px; }
+  /* titel groeit en duwt verwijder + pijltje naar de rechterkant
+   (de acc-meta die dat eerst deed, is op telefoons verborgen) */
+  .advice-col .accordion .acc-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

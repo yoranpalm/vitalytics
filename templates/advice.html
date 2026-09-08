@@ -62,9 +62,9 @@
   {% if a.payload.get('note') %}<p class="hint">{{ a.payload.note }}</p>{% endif %}
 
   <p class="hint basis-line">
-    Basis: HRV {{ b.get('hrv', '–') }} ms · slaap {{ b.get('slaap_uur', '–') }} u ·
-    rust-HF {{ b.get('rusthf', '–') }} bpm · stappen {{ b.get('stappen', '–') }}
-    (gem. {{ b.get('stappen_gemiddelde', '–') }}) · gegeten {{ b.get('gegeten_kcal', '–') }} kcal
+    Basis: HRV {{ b.get('hrv') or '–' }} ms · slaap {{ b.get('slaap_uur') or '–' }} u ·
+    rust-HF {{ b.get('rusthf') or '–' }} bpm · stappen {{ b.get('stappen') or '–' }}
+    (gem. {{ b.get('stappen_gemiddelde') or '–' }}) · gegeten {{ b.get('gegeten_kcal') or '–' }} kcal
   </p>
 {%- endmacro %}
 

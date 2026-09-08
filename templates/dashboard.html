@@ -28,7 +28,7 @@
   <details class="card col-12 accordion samenvatting" open data-reveal>
     <summary>
       <h2 class="card-title">Gezondheidsanalyse</h2>
-      <span class="chip">{{ samenvatting.bron }}</span>
+      <span class="chip bron-chip">{{ samenvatting.bron }}</span>
       <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
     </summary>
     <div class="acc-body">
@@ -46,12 +46,21 @@
       <p class="hint samenvatting-hint">Gegenereerd: {{ samenvatting.ts }} · ververst bij elke Garmin-sync</p>
     </div>
   </details>
+  <script>
+    /* mobiel: gezondheidsanalyse standaard ingeklapt (desktop blijft open);
+   doordat de kaart pas via data-reveal verschijnt is er geen flits */
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      document.querySelector(".samenvatting").removeAttribute("open");
+    }
+  </script>
   {% endif %}
   {% for c in cards %}
   <article class="card metric col-2" data-reveal>
     <p class="metric-label">{{ c.label }}</p>
     <p class="metric-value">{{ c.value }}<span class="metric-unit"> {{ c.unit }}</span></p>
-    {% if c.spark %}<div class="spark" data-spark="{{ c.spark }}" data-unit="{{ c.unit }}"></div>{% endif %}
+    {% if c.doel_pct is defined %}
+    <div class="progress"><span style="width: {{ c.doel_pct }}%"></span></div>
+    {% elif c.spark %}<div class="spark" data-spark="{{ c.spark }}" data-unit="{{ c.unit }}"></div>{% endif %}
     <p class="hint">{{ c.hint }}</p>
   </article>
   {% endfor %}

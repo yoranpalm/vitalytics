@@ -102,12 +102,15 @@
     {% for dag in dagen %}
     <details class="card accordion" data-reveal {% if loop.first %}open{% endif %}>
       <summary>
-        <span class="acc-title">{{ dag.label }}</span>
+        <span class="acc-title">
+          <span class="datum-lang">{{ dag.label }}</span>
+          <span class="datum-kort">{{ dag.label_kort or dag.label }}</span>
+        </span>
         <span class="acc-meta">{{ dag.maaltijden|length }} {{ 'maaltijd' if dag.maaltijden|length == 1 else 'maaltijden' }} · {{ dag.totaal.kcal|int }} kcal</span>
         <svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
       </summary>
       <div class="acc-body">
-        <div class="list">
+        <div class="list list-acties">
           {% for m in dag.maaltijden %}
           <div class="list-item" data-kcal="{{ m.kcal or 0 }}">
             {% if m.photo_path %}

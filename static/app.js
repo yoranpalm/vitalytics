@@ -21,6 +21,43 @@ async function api(url, opts = {}) {
   return data;
 }
 
+/* ---------------- paginawissel: contentgebied fadt kort weg ----------------
+   Bij een interne link eerst .main laten wegkomen en dan pas navigeren; de
+   binnenkomst doen de data-reveal intro's. De navigatiebalk zit buiten .main
+   en blijft dus staan. Bewust met JS i.p.v. cross-document View Transitions:
+   die sloeg Chrome/Safari over bij oa. terug-navigatie uit de bfcache en
+   bestaat niet in Firefox — dit werkt altijd. */
+document.addEventListener("click", (e) => {
+  if (e.defaultPrevented || e.button !== 0) return;
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target && e.target.closest && e.target.closest("a");
+  if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
+  const href = a.getAttribute("href");
+  if (!href || href.startsWith("#") || href.startsWith("mailto:")) return;
+  let url;
+  try { url = new URL(a.href, location.href); } catch (err) { return; }
+  if (url.origin !== location.origin) return;
+  if (url.pathname.startsWith("/api/")) return;               // downloads/export
+  if (url.href.split("#")[0] === location.href.split("#")[0]) return; // zelfde pagina
+  if (window.matchMedia
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const hoofd = document.querySelector(".main");
+  if (!hoofd) return;
+  e.preventDefault();
+  hoofd.classList.add("page-uit");
+  setTimeout(() => { location.href = a.href; }, 140);
+});
+
+/* Terug/vooruit-navigatie kan de pagina uit de bfcache herstellen — bevroren
+   in de staat bij het verleave, inclusief de weg-gefade class. Ruim dat op,
+   anders komt de pagina onzichtbaar terug. */
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) {
+    const hoofd = document.querySelector(".main");
+    if (hoofd) hoofd.classList.remove("page-uit");
+  }
+});
+
 /* ---------------- zacht binnenkomen van blokken ---------------- */
 function initReveal() {
   const els = document.querySelectorAll("[data-reveal]");
@@ -46,7 +83,10 @@ let snackTimer;
 function toast(msg, ok = true) {
   const el = $("#snackbar");
   if (!el) return;
-  el.textContent = msg;
+  // korte, strakke melding: witregels/vuiele spaties weg en bij lange
+  // teksten afkappen (de volledige foutmelding staat in de serverlog)
+  const schoon = String(msg || "").replace(/\s+/g, " ").trim();
+  el.textContent = schoon.length > 90 ? schoon.slice(0, 87).trimEnd() + "\u2026" : schoon;
   el.className = "snackbar show" + (ok ? "" : " err");
   clearTimeout(snackTimer);
   snackTimer = setTimeout(() => { el.className = "snackbar"; }, 4000);
@@ -476,6 +516,25 @@ function initSchema() {
     row.querySelector("input").addEventListener("input", refresh);
   });
   goal?.addEventListener("input", refresh);
+
+  /* weekdoel als tikbare chipjes 1-7: één tik zet het doel, nogmaals tikken op
+   het actieve nummer maakt het doel weer leeg (geen weekdoel) */
+  const doelChips = document.querySelectorAll(".doel-chip");
+  const syncChips = () => {
+    const waarde = goal?.value || "";
+    doelChips.forEach((c) => {
+      const actief = c.dataset.doel === String(waarde);
+      c.classList.toggle("actief", actief);
+      c.setAttribute("aria-pressed", actief ? "true" : "false");
+    });
+  };
+  doelChips.forEach((chip) => chip.addEventListener("click", () => {
+    if (!goal) return;
+    goal.value = (chip.dataset.doel === String(goal.value)) ? "" : chip.dataset.doel;
+    goal.dispatchEvent(new Event("input", { bubbles: true }));
+    syncChips();
+  }));
+  syncChips();
   refresh();
 
   form.addEventListener("submit", async (e) => {
@@ -500,7 +559,7 @@ function initSchema() {
           entries,
         }),
       });
-      toast(`Schema opgeslagen: ${r.opgeslagen} training(en) in week ${form.dataset.week.split("-W")[1]}`);
+      toast("Schema opgeslagen");
     } catch (err) {
       toast(err.message, false);
     }
