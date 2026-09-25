@@ -26,6 +26,8 @@ from core import (activity_analysis, advisor, ai_utils, garmin_client,
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 app.config["TEMPLATES_AUTO_RELOAD"] = True  # lokale tool: template-wijzigingen direct zien
+# cookie alleen naar dezelfde site (geen cross-site POSTs) — past bij de API's
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 # sessie blijft 30 dagen actief — ook na het sluiten van de browser. De cookie
 # wordt bij elk bezoek verlengd (SESSION_REFRESH_EACH_REQUEST), dus wie de app
 # regelmatig gebruikt hoeft nooit opnieuw in te loggen; uitloggen wist hem direct.
@@ -61,6 +63,40 @@ def _sessie_secret():
 
 
 app.secret_key = _sessie_secret()
+
+
+def _beveilig_bestanden():
+    """Bestandsrechten verstrakken (Linux/CT): de data-map en de bestanden
+    erin (database, sessiesleutel, crypto-sleutel, Garmin-tokens) leesbaar
+    alleen voor de servicegebruiker. Op Windows is chmod beperkt — onschuldig."""
+    try:
+        os.chmod(store.DATA_DIR, 0o700)
+    except OSError:
+        pass
+    for pad in (store.DB_PATH,
+                os.path.join(store.DATA_DIR, "session-secret"),
+                os.path.join(store.DATA_DIR, "crypto-key")):
+        try:
+            if os.path.exists(pad):
+                os.chmod(pad, 0o600)
+        except OSError:
+            pass
+    tokens = os.path.join(store.DATA_DIR, "garmin-tokens")
+    if os.path.isdir(tokens):
+        try:
+            os.chmod(tokens, 0o700)
+        except OSError:
+            pass
+        for naam in os.listdir(tokens):
+            try:
+                os.chmod(os.path.join(tokens, naam), 0o600)
+            except OSError:
+                pass
+
+
+_beveilig_bestanden()
+# oude, leesbare geheimen (Garmin-wachtwoord/API-sleutel) alsnog versleutelen
+store.migratie_geheimen()
 
 
 def _zorg_demo_account():
@@ -215,6 +251,7 @@ def login():
                 if account["username"] == "demo":
                     session["demo"] = True  # read-only: alleen rondkijken
                 return redirect("/")
+            time.sleep(1.0)  # brute-force afremmen, net als bij de pincode
             fout = "Onjuiste logingegevens."
     pin = store.pin_login_info()
     return render_template("login.html", fout=fout, geen_gebruikers=geen,

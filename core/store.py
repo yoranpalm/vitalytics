@@ -7,6 +7,14 @@ from datetime import datetime
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
+# versleuteling-at-rest: zonder de package cryptography wordt er niet
+# versleuteld en blijft de app gewoon werken (alleen onveiliger)
+try:
+    from cryptography.fernet import Fernet, InvalidToken
+    _FERNET_KLAAR = True
+except ImportError:
+    _FERNET_KLAAR = False
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
@@ -16,6 +24,77 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 _LOCK = threading.Lock()
 _METRIC_FIELDS = ("steps", "resting_hr", "hrv", "sleep_hours", "sleep_score",
                   "weight", "body_fat", "active_calories", "stress", "source")
+
+# ------------------------------------------------------ versleuteling-at-rest
+# Garmin-wachtwoord en AI-API-sleutel staan versleuteld (Fernet) in de
+# database; de sleutel staat in data/crypto-key. Lekt er alleen de database
+# (bijv. een backup), dan lekken deze geheimen niet mee. De instellingen-
+# pagina en de sync lezen ze transparant uit.
+_ENC_VOORVOEGSEL = "enc:v1:"
+_ENC_SLEUTELS = ("garmin_password", "ai_api_key")
+_CRYPTO_PAD = os.path.join(DATA_DIR, "crypto-key")
+
+
+def _crypto_sleutel():
+    """Fernet-sleutel uit data/crypto-key; eenmalig aangemaakt."""
+    try:
+        with open(_CRYPTO_PAD) as f:
+            waarde = f.read().strip()
+        if waarde:
+            return waarde
+    except OSError:
+        pass
+    waarde = Fernet.generate_key().decode()
+    with open(_CRYPTO_PAD, "w") as f:
+        f.write(waarde)
+    try:
+        os.chmod(_CRYPTO_PAD, 0o600)
+    except OSError:
+        pass
+    return waarde
+
+
+def _fernet():
+    return Fernet(_crypto_sleutel().encode())
+
+
+def _versleutel(waarde):
+    if not _FERNET_KLAAR or waarde in ("", None):
+        return waarde
+    return _ENC_VOORVOEGSEL + _fernet().encrypt(str(waarde).encode()).decode()
+
+
+def _ontsleutel(waarde):
+    """Versleutelde waarde teruggeven als leesbare tekst; waarden zonder het
+    versleutelde voorvoegsel (oude situatie) gaan ongemoeid voorbij."""
+    if (not _FERNET_KLAAR or not isinstance(waarde, str)
+            or not waarde.startswith(_ENC_VOORVOEGSEL)):
+        return waarde
+    try:
+        return _fernet().decrypt(waarde[len(_ENC_VOORVOEGSEL):].encode()).decode()
+    except (InvalidToken, ValueError):
+        return waarde
+
+
+def migratie_geheimen():
+    """Bestaande leesbare geheimen in de database eenmalig versleuteld weg
+    schrijven (oude installaties vóór deze maatregel)."""
+    if not _FERNET_KLAAR:
+        return
+    with _connect() as conn:
+        for sleutel in _ENC_SLEUTELS:
+            row = conn.execute("SELECT value FROM profile WHERE key = ?",
+                               (sleutel,)).fetchone()
+            if not row:
+                continue
+            try:
+                waarde = json.loads(row["value"])
+            except (TypeError, ValueError):
+                waarde = row["value"]
+            if (isinstance(waarde, str) and waarde
+                    and not waarde.startswith(_ENC_VOORVOEGSEL)):
+                conn.execute("UPDATE profile SET value = ? WHERE key = ?",
+                             (json.dumps(_versleutel(waarde)), sleutel))
 
 
 def today():
@@ -129,6 +208,8 @@ _DEFAULTS = {"age": "", "sex": "", "height_cm": "", "weight_kg": "",
 
 
 def set_setting(key, value):
+    if key in _ENC_SLEUTELS:
+        value = _versleutel(value)  # gevoelige instellingen nooit leesbaar op schijf
     with _LOCK, _connect() as conn:
         conn.execute(
             "INSERT INTO profile (key, value) VALUES (?, ?) "
@@ -142,9 +223,12 @@ def get_setting(key, default=None):
     if row is None:
         return _DEFAULTS.get(key, default) if key in _DEFAULTS else default
     try:
-        return json.loads(row["value"])
+        waarde = json.loads(row["value"])
     except (TypeError, ValueError):
-        return row["value"]
+        waarde = row["value"]
+    if key in _ENC_SLEUTELS:
+        return _ontsleutel(waarde)
+    return waarde
 
 
 def settings():
@@ -152,9 +236,12 @@ def settings():
     with _connect() as conn:
         for row in conn.execute("SELECT key, value FROM profile"):
             try:
-                out[row["key"]] = json.loads(row["value"])
+                waarde = json.loads(row["value"])
             except (TypeError, ValueError):
-                out[row["key"]] = row["value"]
+                waarde = row["value"]
+            if row["key"] in _ENC_SLEUTELS:
+                waarde = _ontsleutel(waarde)
+            out[row["key"]] = waarde
     return out
 
 

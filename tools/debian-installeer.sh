@@ -59,6 +59,15 @@ EOF
 
 mkdir -p data/uploads
 chown -R "$SVC_USER:$SVC_USER" "$APPDIR"
+# verharding: data-map en geheimen alleen leesbaar voor de servicegebruiker
+chmod 700 "$APPDIR/data"
+for f in data/coach.db data/session-secret data/crypto-key; do
+  if [ -f "$APPDIR/$f" ]; then chmod 600 "$APPDIR/$f"; fi
+done
+if [ -d "$APPDIR/data/garmin-tokens" ]; then
+  chmod 700 "$APPDIR/data/garmin-tokens"
+  chmod 600 "$APPDIR/data/garmin-tokens/"* 2>/dev/null || true
+fi
 
 systemctl daemon-reload
 systemctl enable vitalytics >/dev/null

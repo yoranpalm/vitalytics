@@ -9,3 +9,6 @@ garminconnect>=0.3.11
 
 # EXIF-loze herschaling van maaltijdfoto's vóór cloudanalyse
 pillow>=10.0
+
+# versleuteling-at-rest van gevoelige instellingen (Garmin-wachtwoord, API-sleutel)
+cryptography>=42.0
