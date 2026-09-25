@@ -814,6 +814,15 @@ input[type="file"][hidden] { display: none; }
 /* -- sparklines -- */
 .spark { margin-top: var(--sp-2); }
 .spark svg { width: 100%; height: 44px; display: block; }
+/* de lijn tekent zichzelf zacht in zodra de kaart binnenkomt (initReveal);
+   pathLength=1 maakt de animatie onafhankelijk van de lijnlengte, het
+   eindpunt verschijnt pas als de lijn klaar is */
+.js .spark polyline { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.js [data-reveal].revealed .spark polyline {
+  animation: teken-in 0.8s cubic-bezier(0.2, 0, 0, 1) 0.2s forwards;
+}
+.js [data-reveal].revealed .spark circle { animation: fade-in 0.25s ease 1s backwards; }
+@keyframes teken-in { to { stroke-dashoffset: 0; } }
 .spark-range {
   display: flex;
   justify-content: space-between;
@@ -925,6 +934,86 @@ input[type="file"][hidden] { display: none; }
   mask: var(--icoon-fout) center / contain no-repeat;
 }
 
+/* -- lockscreen: pincode-login (cijferblok, zoals een telefoon) -- */
+.pin-scherm { text-align: center; }
+.pin-titel { margin: 0 0 var(--sp-1); font-size: var(--fs-20); font-weight: 500; }
+.pin-sub {
+  margin: 0;
+  font-size: var(--fs-14);
+  color: var(--on-surface-variant);
+}
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0 var(--sp-2);
+  min-height: 14px;
+}
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--outline);
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.pin-dot.gevuld {
+  background: var(--primary);
+  border-color: var(--primary);
+  transform: scale(1.15);
+}
+.pin-fout {
+  min-height: 18px;
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-12);
+  color: var(--error);
+}
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 68px);
+  gap: var(--sp-3);
+  justify-content: center;
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+.pin-toets {
+  width: 68px;
+  height: 68px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  font: inherit;
+  font-size: var(--fs-20);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.08s;
+}
+.pin-toets:active { background: var(--primary-container); transform: scale(0.94); }
+.pin-functie { font-size: var(--fs-14); color: var(--on-surface-variant); }
+.login-wissel {
+  display: block;
+  margin: var(--sp-3) auto 0;
+  padding: var(--sp-2);
+  border: none;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: var(--fs-14);
+  text-decoration: underline;
+  cursor: pointer;
+}
+@keyframes pin-schud {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+.pin-scherm.pin-fout-schud { animation: pin-schud 0.36s cubic-bezier(0.2, 0, 0, 1); }
+
 /* ==========================================================================
    -- motion -- subtiele M3-overgangen; met respect voor reduced motion
    ========================================================================== */
@@ -1027,6 +1116,10 @@ input[type="file"][hidden] { display: none; }
   .nav-item:active .nav-icon { transform: none; }
   .snackbar, .snackbar.show { transition: none; }
   .login-fout { animation: none; }
+  .pin-scherm.pin-fout-schud { animation: none; }
+  .js .spark polyline { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
+  .js [data-reveal].revealed .spark circle { animation: none; }
+  .pin-dot, .pin-toets { transition: none; }
   .main.page-uit { transition: none; opacity: 1; transform: none; }
 }
 

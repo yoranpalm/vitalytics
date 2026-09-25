@@ -26,6 +26,10 @@ from core import (activity_analysis, advisor, ai_utils, garmin_client,
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 app.config["TEMPLATES_AUTO_RELOAD"] = True  # lokale tool: template-wijzigingen direct zien
+# sessie blijft 30 dagen actief — ook na het sluiten van de browser. De cookie
+# wordt bij elk bezoek verlengd (SESSION_REFRESH_EACH_REQUEST), dus wie de app
+# regelmatig gebruikt hoeft nooit opnieuw in te loggen; uitloggen wist hem direct.
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
 app.json.ensure_ascii = False
 
 store.init_db()
@@ -168,6 +172,8 @@ def _float(value):
 @app.before_request
 def _vereist_login():
     """Alles achter een login, behalve het inlogscherm en statische bestanden."""
+    # permanente sessie: blijft 30 dagen actief, ook over browserherstarts
+    session.permanent = True
     if session.get("gebruiker"):
         if session.get("demo"):
             # demo-account: alleen bekijken — de server dwingt dit af, ongeacht
@@ -179,7 +185,8 @@ def _vereist_login():
                     return jsonify({"error": "Demo-account: alleen bekijken"}), 403
                 return redirect("/")
         return None
-    if (request.endpoint or "") in ("login", "uitloggen", "static", "favicon", "sw_js"):
+    if (request.endpoint or "") in ("login", "uitloggen", "static", "favicon", "sw_js",
+                                    "pin_login"):
         return None
     if request.path.startswith("/api/"):
         return jsonify({"error": "Niet ingelogd"}), 401
@@ -209,7 +216,10 @@ def login():
                     session["demo"] = True  # read-only: alleen rondkijken
                 return redirect("/")
             fout = "Onjuiste logingegevens."
-    return render_template("login.html", fout=fout, geen_gebruikers=geen)
+    pin = store.pin_login_info()
+    return render_template("login.html", fout=fout, geen_gebruikers=geen,
+                           pin_len=(pin or {}).get("pin_len"),
+                           pin_naam=((pin or {}).get("username") or "").capitalize())
 
 
 @app.route("/uitloggen")
@@ -635,6 +645,47 @@ def api_gebruiker_verwijder(user_id):
     if store.aantal_gebruikers() <= 1:
         return jsonify({"error": "Dit is het enige account"}), 400
     store.verwijder_gebruiker(user_id)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/login/pin", methods=["POST"])
+def pin_login():
+    """Lockscreen-login: pincode controleren en direct inloggen op dat account.
+    Publiek endpoint (net als /login); verkeerde pogingen worden bewust met
+    een seconde vertraagd — een pincode is kort en dit endpoint is open."""
+    data = request.get_json(silent=True) or {}
+    pin = str(data.get("pin") or "").strip()
+    if not (pin.isdigit() and 4 <= len(pin) <= 8):
+        return jsonify({"error": "Ongeldige pincode"}), 400
+    account = store.gebruiker_via_pin(pin)
+    if not account:
+        time.sleep(1.0)
+        return jsonify({"error": "Onjuiste pincode"}), 401
+    session["gebruiker"] = account["username"]
+    return jsonify({"ok": True})
+
+
+@app.route("/api/gebruikers/<int:user_id>/pin", methods=["POST"])
+def api_gebruiker_pin(user_id):
+    """Pincode instellen (4-8 cijfers): dit account kan daarna vanaf het
+    inlogscherm via het cijferblok worden geopend."""
+    namen = {u["id"]: u["username"] for u in store.gebruikers()}
+    if user_id not in namen:
+        return jsonify({"error": "Account niet gevonden"}), 404
+    if namen[user_id] == "demo":
+        return jsonify({"error": "Het demo-account kan geen pincode hebben"}), 400
+    data = request.get_json(force=True, silent=True) or {}
+    pin = str(data.get("pin") or "").strip()
+    if not (pin.isdigit() and 4 <= len(pin) <= 8):
+        return jsonify({"error": "Pincode: 4 tot 8 cijfers, alleen cijfers"}), 400
+    store.zet_pin(user_id, pin)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/gebruikers/<int:user_id>/pin", methods=["DELETE"])
+def api_gebruiker_pin_weg(user_id):
+    """Pincode wissen; het account blijft bereikbaar met wachtwoord."""
+    store.zet_pin(user_id, None)
     return jsonify({"ok": True})
 
 

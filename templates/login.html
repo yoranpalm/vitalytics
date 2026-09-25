@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="nl">
 <head>
   <meta charset="utf-8">
@@ -11,32 +11,132 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=146">
+  <link rel="stylesheet" href="/static/style.css?v=151">
 </head>
 <body class="login-body">
   <main class="login-kaart">
-    <div class="login-logo">
-      <svg width="40" height="40" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="var(--primary-container)"/><path d="M9.5 9.5L17 24.5L24.5 9.5" fill="none" stroke="var(--on-primary-container)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </div>
-    <h1>Vitalytics</h1>
-    {% if geen_gebruikers %}<p class="login-hint">Maak je eerste account om de app te beveiligen.</p>{% endif %}
-    {% if fout %}<p class="login-fout">{{ fout }}</p>{% endif %}
-    <form method="post" action="/login">
-      <label class="field">
-        <span class="field-box">
-          <input name="gebruiker" autocomplete="username" required placeholder=" ">
-          <span class="flabel">Gebruikersnaam</span>
-        </span>
-      </label>
-      <label class="field">
-        <span class="field-box">
-          <input name="wachtwoord" type="password" autocomplete="current-password" required placeholder=" ">
-          <span class="flabel">Wachtwoord</span>
-        </span>
-      </label>
-      <button class="btn" type="submit">{% if geen_gebruikers %}Account aanmaken &amp; inloggen{% else %}Inloggen{% endif %}</button>
-    </form>
-    <p class="login-hint">Jouw coach, jouw data — niets verlaat deze machine.</p>
+    {% if pin_len %}
+    <section id="pin-scherm" class="pin-scherm"{% if fout %} hidden{% endif %}>
+      <div class="login-logo">
+        <svg width="40" height="40" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="var(--primary-container)"/><path d="M9.5 9.5L17 24.5L24.5 9.5" fill="none" stroke="var(--on-primary-container)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1 class="pin-titel">{{ pin_naam }}</h1>
+      <p class="pin-sub">Voer je pincode in</p>
+      <div class="pin-dots" id="pin-dots" aria-label="Ingetypte pincode">
+        {% for _ in range(pin_len) %}<span class="pin-dot"></span>{% endfor %}
+      </div>
+      <p class="pin-fout" id="pin-fout" aria-live="polite"></p>
+      <div class="pin-pad">
+        {% for t in [1, 2, 3, 4, 5, 6, 7, 8, 9] %}
+        <button type="button" class="pin-toets" data-toets="{{ t }}">{{ t }}</button>
+        {% endfor %}
+        <button type="button" class="pin-toets pin-functie" data-toets="clear" aria-label="Alles wissen">C</button>
+        <button type="button" class="pin-toets" data-toets="0">0</button>
+        <button type="button" class="pin-toets pin-functie" data-toets="back" aria-label="Teken wissen">&#9003;</button>
+      </div>
+      <button type="button" class="login-wissel" id="naar-wachtwoord">Inloggen met wachtwoord</button>
+    </section>
+    <section id="wacht-scherm"{% if not fout %} hidden{% endif %}>
+    {% else %}
+    <section id="wacht-scherm">
+    {% endif %}
+      <div class="login-logo">
+        <svg width="40" height="40" viewBox="0 0 34 34"><rect width="34" height="34" rx="9" fill="var(--primary-container)"/><path d="M9.5 9.5L17 24.5L24.5 9.5" fill="none" stroke="var(--on-primary-container)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1>Vitalytics</h1>
+      {% if geen_gebruikers %}<p class="login-hint">Maak je eerste account om de app te beveiligen.</p>{% endif %}
+      {% if fout %}<p class="login-fout">{{ fout }}</p>{% endif %}
+      <form method="post" action="/login">
+        <label class="field">
+          <span class="field-box">
+            <input name="gebruiker" autocomplete="username" required placeholder=" ">
+            <span class="flabel">Gebruikersnaam</span>
+          </span>
+        </label>
+        <label class="field">
+          <span class="field-box">
+            <input name="wachtwoord" type="password" autocomplete="current-password" required placeholder=" ">
+            <span class="flabel">Wachtwoord</span>
+          </span>
+        </label>
+        <button class="btn" type="submit">{% if geen_gebruikers %}Account aanmaken &amp; inloggen{% else %}Inloggen{% endif %}</button>
+      </form>
+      {% if pin_len %}<button type="button" class="login-wissel" id="naar-pin">Inloggen met pincode</button>{% endif %}
+    </section>
   </main>
+  {% if pin_len %}
+  <script>
+  (function () {
+    const pinLen = {{ pin_len }};
+    const schermPin = document.getElementById("pin-scherm");
+    const schermWacht = document.getElementById("wacht-scherm");
+    const dots = Array.from(document.querySelectorAll("#pin-dots .pin-dot"));
+    const melding = document.getElementById("pin-fout");
+    let code = "";
+
+    function teken() {
+      dots.forEach((d, i) => d.classList.toggle("gevuld", i < code.length));
+      if (melding) melding.textContent = "";
+    }
+
+    async function verstuur() {
+      if (code.length !== pinLen) return;
+      try {
+        const r = await fetch("/api/login/pin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: code }),
+        });
+        if (r.ok) {
+          location.href = "/";
+          return;
+        }
+        code = "";
+        teken();
+        if (melding) melding.textContent = "Onjuiste pincode — probeer opnieuw";
+        schermPin.classList.remove("pin-fout-schud");
+        void schermPin.offsetWidth; // animatie herstarten
+        schermPin.classList.add("pin-fout-schud");
+      } catch (e) {
+        code = "";
+        teken();
+        if (melding) melding.textContent = "Server onbereikbaar — probeer opnieuw";
+      }
+    }
+
+    function toets(t) {
+      if (t === "back") { code = code.slice(0, -1); teken(); return; }
+      if (t === "clear") { code = ""; teken(); return; }
+      if (!/^[0-9]$/.test(t) || code.length >= pinLen) return;
+      code += t;
+      teken();
+      if (code.length === pinLen) verstuur();
+    }
+
+    document.querySelectorAll(".pin-toets").forEach((b) =>
+      b.addEventListener("click", () => toets(b.dataset.toets)));
+
+    document.addEventListener("keydown", (e) => {
+      if (schermPin.hidden) return;
+      if (e.key >= "0" && e.key <= "9") toets(e.key);
+      else if (e.key === "Backspace") toets("back");
+      else if (e.key === "Escape") toets("clear");
+    });
+
+    document.getElementById("naar-wachtwoord")?.addEventListener("click", () => {
+      schermPin.hidden = true;
+      schermWacht.hidden = false;
+      const veld = schermWacht.querySelector("input[name='gebruiker']");
+      if (veld) veld.focus();
+    });
+    document.getElementById("naar-pin")?.addEventListener("click", () => {
+      schermWacht.hidden = true;
+      schermPin.hidden = false;
+      code = "";
+      teken();
+    });
+  })();
+  </script>
+  {% endif %}
 </body>
 </html>

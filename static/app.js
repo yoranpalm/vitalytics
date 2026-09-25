@@ -120,7 +120,7 @@ function sparkSvg(values, unit) {
   });
   const lastPt = pts[pts.length - 1];
   return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img">
-    <polyline points="${pts.map((p) => p.join(",")).join(" ")}" fill="none"
+    <polyline pathLength="1" points="${pts.map((p) => p.join(",")).join(" ")}" fill="none"
       stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     <circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="3.5" fill="var(--tertiary)"/>
   </svg>
@@ -791,7 +791,34 @@ function initSettings() {
         const sub = document.createElement("div");
         sub.className = "list-sub";
         sub.textContent = g.created_at ? `account sinds ${datumNL(g.created_at)}` : "account";
+        if (g.pin_gezet) sub.textContent += " · PIN ingesteld";
         tekst.append(nm, sub);
+        const pinKnop = document.createElement("button");
+        pinKnop.type = "button";
+        pinKnop.className = "icon-btn";
+        pinKnop.setAttribute("aria-label", `Pincode instellen voor ${g.username}`);
+        pinKnop.title = "Pincode instellen (cijferblok op het inlogscherm)";
+        pinKnop.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
+        pinKnop.addEventListener("click", async () => {
+          const pin = prompt(`Pincode (4-8 cijfers) voor '${g.username}'. Leeg laten en OK = pincode wissen:`);
+          if (pin === null) return;
+          const p = pin.trim();
+          try {
+            if (!p) {
+              if (!confirm(`Pincode voor '${g.username}' wissen?`)) return;
+              await api(`/api/gebruikers/${g.id}/pin`, { method: "DELETE" });
+              toast("Pincode gewist");
+            } else {
+              await api(`/api/gebruikers/${g.id}/pin`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pin: p }),
+              });
+              toast("Pincode ingesteld");
+            }
+            laadGebruikers();
+          } catch (e) { toast(e.message, false); }
+        });
         const knop = document.createElement("button");
         knop.type = "button";
         knop.className = "icon-btn del-user";
@@ -806,7 +833,7 @@ function initSettings() {
             laadGebruikers();
           } catch (e) { toast(e.message, false); }
         });
-        rij.append(tekst, knop);
+        rij.append(tekst, pinKnop, knop);
         usersBox.append(rij);
       });
     } catch (e) {
