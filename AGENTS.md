@@ -37,7 +37,7 @@ geen frontend-framework. Alles in het Nederlands (code, UI en comments).
 
 1. **Cache-bumpen**: bij elke wijziging in `static/style.css` of
    `static/app.js` de query-params verhogen (`style.css?v=N` in base.html én
-   login.html, `app.js?v=N` in base.html) én `CACHE`/`VERSION` in
+   login.html, `app.js?v=N` in base.html) én `CACHE`/`CSS_V`/`JS_V` in
    `static/sw.js`. CSS/JS zijn network-first, HTML ook; zonder bump blijven
    PWA's soms oudere assets zien.
 2. **Mobiel-first afronden**: alle mobiele stijlen staan in twee media

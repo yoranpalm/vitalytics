@@ -256,7 +256,10 @@ def _prompt(ctx, fallback, anoniem=None):
     definitief = {
         "readiness": fallback["readiness"],
         "kcal_doel": fallback["voeding"]["kcal_doel"],
-        "kcal_over": fallback["voeding"]["kcal_over"],
+        # bewust niet "kcal_over": modellen lazen een negatieve waarde als
+        # "negatieve overschrijding" (= extreem weinig gegeten), terwijl de
+        # regelengine hem als "nog overgebleven ruimte" bedoelt (doel - gegeten)
+        "kcal_overgebleven": fallback["voeding"]["kcal_over"],
         "eiwit_g": fallback["voeding"]["eiwit_g"],
         "koolhydraten_g": fallback["voeding"]["koolhydraten_g"],
         "vet_g": fallback["voeding"]["vet_g"],
@@ -277,19 +280,22 @@ Gemiddelden laatste 7 dagen: stappen {ctx.get('steps_avg')}, rust-HF {ctx.get('r
 DEFINITIEVE cijfers, reeds berekend met Mifflin-St Jeor x activiteitsfactor, gecorrigeerd voor doel en de maaltijden van vandaag. Neem deze cijfers EXACT over in je JSON:
 {json.dumps(definitief, ensure_ascii=False)}
 
+Betekenis van "kcal_overgebleven": kcal_doel minus wat je vandaag al gegeten hebt (totaal {ctx['consumed']} kcal, zie hierboven). Positief = er is nog ruimte over; negatief = je hebt al MÉÉR gegeten dan je dagdoel. Interpreteer een negatieve waarde dus altijd als "boven je doel gegeten", nooit als "weinig of te weinig gegeten".
+
 Eisen aan je advies:
 - Benut de gemiddelden en trends (slaap, HRV ten opzichte van je basislijn, stappen, kcal per dag) expliciet in je advies en onderbouwing.
 - Wees uitgebreid: geef volledige, praktische adviezen in plaats van korte steekwoorden.
 - Trainingsadvies past bij de readyheid en herstelmarkers; leg in "waarom" in 3-5 zinnen uit waarom dit type training vandaag het beste past (data, effect op het lichaam, praktische uitvoering).
 - Voedingsdoelen zijn consistent met Mifflin-St Jeor en sportvoedingsrichtlijnen (eiwit 1,6-2,2 g/kg/dag).
 - De cijfers uit de referentie zijn leidend: verzin geen eigen kcal- of macro-aantallen; in de tips mag je wel tekstueel alternatieve maaltijdide\u00ebn voorstellen.
+- Gebruik de eetsituatie correct in je tekst: het aantal GEGETEN kcal staat bij "Maaltijden vandaag"; "kcal_overgebleven" positief betekent ruimte over, negatief betekent boven je dagdoel gegeten.
 - Geef 4-6 coachtips die vandaag of deze week direct toepasbaar zijn (concreet: wat, wanneer, hoeveel).
 - Geef 4-6 items bij "onderbouwing"; leg per item in 3-6 zinnen uit hoe het lichaam werkt en waarom dit advies daarbij aansluit.
 - Wees concreet en persoonlijk; herhaal niet klakkeloos de referentie als je er inhoudelijk iets op vindt.
 - Schrijf alsof je het aan een vriend uitlegt die geen sportwetenschapper is: korte zinnen, en vaktermen (zoals HRV, zone 2, TDEE) altijd even in gewone woorden toegelicht.
 
 Antwoord in het Nederlands, uitsluitend als JSON met exact deze structuur:
-{{"readiness": <0-100>, "training": {{"type": "...", "duur_min": <int>, "intensiteit": "...", "waarom": "<3-5 volledige zinnen, praktisch en in begrijpelijke taal>"}}, "voeding": {{"kcal_doel": <int>, "kcal_over": <int>, "eiwit_g": <int>, "koolhydraten_g": <int>, "vet_g": <int>, "tips": ["<concrete, toepasbare tips>"]}}, "onderbouwing": [{{"onderwerp": "<kort onderwerp>", "uitleg": "<mechanisme of richtlijn, 3-6 zinnen in gewone woorden>"}}], "tips": ["<4-6 concrete coachtips>"], "waarschuwingen": ["..."]}}"""
+{{"readiness": <0-100>, "training": {{"type": "...", "duur_min": <int>, "intensiteit": "...", "waarom": "<3-5 volledige zinnen, praktisch en in begrijpelijke taal>"}}, "voeding": {{"kcal_doel": <int>, "kcal_overgebleven": <int>, "eiwit_g": <int>, "koolhydraten_g": <int>, "vet_g": <int>, "tips": ["<concrete, toepasbare tips>"]}}, "onderbouwing": [{{"onderwerp": "<kort onderwerp>", "uitleg": "<mechanisme of richtlijn, 3-6 zinnen in gewone woorden>"}}], "tips": ["<4-6 concrete coachtips>"], "waarschuwingen": ["..."]}}"""
 
     return prompt
 

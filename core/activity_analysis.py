@@ -190,49 +190,78 @@ def spieren_svg(key):
 
 
 def _te_label(ate):
+    """Garmins officiële trainingseffect-schaal (0-5), in het Nederlands."""
     if ate is None:
         return None
     v = f"{ate:.1f}".replace(".", ",")
     if ate < 1:
-        return f"{v} \u00b7 minimaal effect"
+        return f"{v} · geen effect (rustwerk)"
     if ate < 2:
-        return f"{v} \u00b7 herstelwerking"
+        return f"{v} · klein effect"
     if ate < 3:
-        return f"{v} \u00b7 onderhoudend"
+        return f"{v} · onderhoudend"
     if ate < 4:
-        return f"{v} \u00b7 verbeterend"
+        return f"{v} · verbeterend"
     if ate < 5:
-        return f"{v} \u00b7 sterk verbeterend"
-    return f"{v} \u00b7 overdreven \u2014 let op opbouw"
+        return f"{v} · sterk verbeterend"
+    return f"{v} · overreaching — over je grens"
 
 
 def _te_uitleg(ate):
-    """Uitleg bij het aerobe trainingseffect, in gewone mensentaal."""
+    """Uitleg bij het aerobe trainingseffect, in gewone mensentaal, met dezelfde
+    bandbreedtes en betekenis als Garmin Connect hanteert."""
     if ate is None:
         return None
     if ate < 1:
-        return ("Deze sessie was heel licht: je lichaam hoefde zich nauwelijks aan te "
-                "passen. Ideaal voor een rustdag, of gewoon om lekker in beweging te zijn.")
+        return ("Garmin meet hier geen meetbaar trainingseffect: je lichaam hoefde "
+                "zich nauwelijks aan te passen. Prima als rustwerk of om lekker in "
+                "beweging te zijn, maar telt niet mee als volwaardige training.")
     if ate < 2:
-        return ("Dit was vooral een herstelsessie: goed voor je lichaam, maar het daagde "
-                "je niet echt uit. Precies wat je nodig hebt op een rustige dag.")
+        return ("Een lichte prikkel (Garmin: 'klein voordeel'): iets voor je conditie, "
+                "maar het daagde je weinig uit. Nuttig als tussendoortje of op een "
+                "rustige dag.")
     if ate < 3:
-        return ("Een degelijke training die je huidige conditie op peil houdt. Niet zwaar, "
-                "wel nuttig \u2014 vooral als je dit regelmatig doet.")
+        return ("Een onderhoudende training: dit houdt je huidige conditie op peil "
+                "zonder hem te verbeteren. Regelmatig doen is genoeg.")
     if ate < 4:
-        return ("Een stevige training die je conditie echt verbetert. Je merkt dat vooral "
-                "aan de dag erna: door dan rustig aan te doen, word je sterker.")
+        return ("Een verbeterende training: je conditie groeit hiervan merkbaar. Rust "
+                "de dag erna goed uit om de winst op te bouwen.")
     if ate < 5:
-        return ("Een zware training die je conditie flink verbetert. Geef je lichaam 1 \u00e0 2 "
-                "rustigere dagen om dit te verwerken \u2014 daar word je sterker van.")
-    return ("Een heel zware training, zwaarder dan je lichaam in \u00e9\u00e9n keer kan verwerken. "
-            "Bouw dit soort sessies langzaam op en plan er rustige dagen na.")
+        return ("Een zware training die je conditie sterk verbetert (Garmin: 'highly "
+                "improves'). Geef je lichaam 1 à 2 rustigere dagen om dit te "
+                "verwerken — daar word je sterker van.")
+    return ("Overreaching: zwaarder dan je lichaam in één keer kan verwerken. "
+            "Dat mag af en toe, maar plan 2 dagen rust erna en bouw dit niet elke "
+            "week op.")
 
 
-def analyse_activity(rec, peer_paces, profile):
-    """Analyseer een activiteit in begrijpelijke taal. peer_paces = tempo's (s/km) van
-    eerdere activiteiten van hetzelfde type; profile = {'age': int|None}.
-    Levert 'punten' als lijst van {'label', 'tekst'} voor een opgeruimde weergave."""
+def _zone_tekst(intensity_pct):
+    """Garmin-zone op basis van % van de geschatte hartslagmax, in gewone taal."""
+    if intensity_pct < 60:
+        return ("zone 1 (herstel): je lichaam werkte, maar werd nauwelijks "
+                "uitgedaagd — precies wat een rustdag nodig heeft")
+    if intensity_pct < 70:
+        return ("zone 2 (duur): het tempo waarop je conditie het efficiëntst "
+                "groeit zonder extra herstel te eisen")
+    if intensity_pct < 80:
+        return ("zone 3 (tempo): flink werken — dit verbetert je uithoudingsvermogen "
+                "merkbaar, maar vraagt vaker herstel dan zone 2")
+    if intensity_pct < 90:
+        return ("zone 4 (drempel): zwaar — dit maakt je sneller, maar minstens één "
+                "rustige dag erna is nodig")
+    return ("zone 5 (maximaal): op of boven je drempel — dat houd je alleen vol "
+            "in intervallen of een wedstrijd")
+
+
+def analyse_activity(rec, peers, profile, typische_belasting=None):
+    """Analyseer een activiteit in begrijpelijke taal, zoveel mogelijk in dezelfde
+    termen als Garmin Connect (zones, trainingseffect, belasting).
+    peers = eerdere activiteiten van hetzelfde type als dicts met 'pace' (s/km)
+    en optioneel 'duur_s'; kale floats (oud formaat) worden als tempo gelezen.
+    profile = {'age': int|None}; typische_belasting = gemiddelde trainingsbelasting
+    over recente activiteiten. Levert 'punten' als lijst van {'label', 'tekst'}."""
+    peers = [p if isinstance(p, dict) else {"pace": p} for p in (peers or [])]
+    peer_paces = [p["pace"] for p in peers if p.get("pace")]
     type_key = (rec.get("type") or "").lower()
     label, emoji = type_label(type_key)
     icon = type_icon(type_key)
@@ -241,42 +270,47 @@ def analyse_activity(rec, peer_paces, profile):
     duration_min = duration / 60
     punten = []
 
-    # duur
+    # duur, vergeleken met je eerdere activiteiten van dit type
+    peer_duren = [p.get("duur_s") for p in peers if p.get("duur_s")]
+    duur_extra = ""
+    if peer_duren and duration_min >= 10:
+        gem_duur = sum(peer_duren) / len(peer_duren)
+        delta_dur = (duration - gem_duur) / gem_duur * 100
+        if delta_dur <= -35:
+            duur_extra = f" — duidelijk korter dan je gebruikelijke {label.lower()}"
+        elif delta_dur >= 50:
+            duur_extra = f" — aanzienlijk langer dan je gebruikelijke {label.lower()}"
     if duration_min < 20:
-        dur_txt = "een korte sessie \u2014 prima voor een drukke dag"
+        dur_txt = "een korte sessie"
     elif duration_min < 45:
-        dur_txt = "een degelijke training van gemiddelde lengte"
+        dur_txt = "een sessie van gemiddelde lengte"
     elif duration_min < 90:
         dur_txt = "een stevige training waar je tijd voor nam"
     else:
-        dur_txt = "een echte lange sessie \u2014 knap dat je dit volhield"
+        dur_txt = "een echte lange duursessie"
     punten.append({"label": "Duur",
-                   "tekst": f"Je was {fmt_duration(duration)} onderweg: {dur_txt}."})
+                   "tekst": f"Je was {fmt_duration(duration)} onderweg: {dur_txt}{duur_extra}."})
 
-    # hartslag-intensiteit (Tanaka: HRmax \u2248 208 - 0,7 \u00d7 leeftijd)
+    # hartslag-intensiteit (Tanaka: HRmax ≈ 208 - 0,7 × leeftijd), Garmin-zones
     avg_hr = rec.get("avg_hr")
     age = int(profile.get("age") or 0)
     intensity_pct = None
     if avg_hr and age:
-        hr_max = 208 - 0.7 * age
-        intensity_pct = avg_hr / hr_max * 100
-        if intensity_pct < 60:
-            zone_txt = "heel rustig \u2014 ideaal om te herstellen of gewoon lekker buiten te zijn"
-        elif intensity_pct < 70:
-            zone_txt = ("een rustig tempo waarin je conditie gestaag groeit, zonder dat je "
-                        "lichaam overbelast wordt")
-        elif intensity_pct < 80:
-            zone_txt = "flink werken \u2014 dit maakt je uithoudingsvermogen merkbaar sterker"
-        elif intensity_pct < 90:
-            zone_txt = ("zwaar \u2014 je hebt flink je best gedaan. Dit maakt je sneller, maar "
-                        "je lichaam heeft daarna rust nodig")
-        else:
-            zone_txt = "zeer zwaar \u2014 dat houd je alleen vol bij een wedstrijd of een test"
-        punten.append({
-            "label": "Hartslag",
-            "tekst": f"Je hart sloeg gemiddeld {int(avg_hr)} keer per minuut, ongeveer "
-                     f"{intensity_pct:.0f}% van je geschatte maximum "
-                     f"({_nl(f'{hr_max:.0f}')} slagen per minuut). Dat was {zone_txt}."})
+        hr_schat = 208 - 0.7 * age
+        # gemeten piek hoger dan de schatting? Dan is die de betere referentie
+        hr_ref = max(hr_schat, rec.get("max_hr") or 0)
+        intensity_pct = avg_hr / hr_ref * 100
+        tekst = (f"Je hart sloeg gemiddeld {int(avg_hr)} keer per minuut, ongeveer "
+                 f"{intensity_pct:.0f}% van je maximum "
+                 f"({_nl(f'{hr_ref:.0f}')} slagen per minuut): {_zone_tekst(intensity_pct)}.")
+        max_hr_rec = rec.get("max_hr")
+        if max_hr_rec:
+            peak_pct = max_hr_rec / hr_ref * 100
+            if (max_hr_rec - avg_hr) >= 25 or peak_pct >= 97:
+                tekst += (f" Je piekte op {int(max_hr_rec)} slagen "
+                          f"({_nl(f'{peak_pct:.0f}')}% van je max) — pieken als die "
+                          f"horen bij intervalwerk of een echte topinspanning.")
+        punten.append({"label": "Hartslag", "tekst": tekst})
 
     # tempo / snelheid, met vergelijking tegen eerdere activiteiten van dit type
     pace_now = None
@@ -313,6 +347,50 @@ def analyse_activity(rec, peer_paces, profile):
                             "herstelwerk: beweging zonder extra stress voor je lichaam.")
         punten.append({"label": "Vergelijking", "tekst": vergelijking})
 
+    # belasting: Garmins trainingsbelasting, vergeleken met je recente gemiddelde
+    load = rec.get("training_load")
+    if load and duration_min >= 10:
+        if typische_belasting:
+            verhouding = load / typische_belasting
+            if verhouding >= 1.4:
+                load_txt = (f"Garmin rekent deze sessie om in {_nl(f'{load:.0f}')} "
+                            f"belastingpunten — duidelijk zwaarder dan je recente "
+                            f"gemiddelde ({_nl(f'{typische_belasting:.0f}')}). Zo'n sessie "
+                            f"verdient een rustigere dag erna.")
+            elif verhouding >= 0.8:
+                load_txt = (f"Garmin rekent deze sessie om in {_nl(f'{load:.0f}')} "
+                            f"belastingpunten — precies in lijn met je recente "
+                            f"gemiddelde ({_nl(f'{typische_belasting:.0f}')}).")
+            elif verhouding >= 0.5:
+                load_txt = (f"Garmin rekent deze sessie om in {_nl(f'{load:.0f}')} "
+                            f"belastingpunten — lichter dan je recente gemiddelde "
+                            f"({_nl(f'{typische_belasting:.0f}')}): prima herstelwerk.")
+            else:
+                load_txt = (f"Garmin rekent deze sessie om in {_nl(f'{load:.0f}')} "
+                            f"belastingpunten — heel licht; vooral beweging, weinig "
+                            f"trainingsprikkel.")
+        else:
+            load_txt = (f"Garmin rekent de belasting van deze sessie op "
+                        f"{_nl(f'{load:.0f}')} punten; zodra er meer sessies staan kun je "
+                        f"ze hier met elkaar vergelijken.")
+        punten.append({"label": "Belasting", "tekst": load_txt})
+
+    # hoogtemeters: sessie was zwaarder dan het tempo alleen doet vermoeden
+    elev = rec.get("elevation_m")
+    if elev and elev >= 25 and distance > 0:
+        per_km = elev / (distance / 1000)
+        if per_km >= 10:
+            klim_txt = (f"Je klom {int(elev)} meter ({_nl(f'{per_km:.1f}')} m per km) — "
+                        f"fors heuvelachtig: daardoor was dit zwaarder dan het "
+                        f"gemiddelde tempo doet vermoeden.")
+        elif per_km >= 5:
+            klim_txt = (f"Je klom {int(elev)} meter ({_nl(f'{per_km:.1f}')} m per km) — "
+                        f"lekker glooiend; dat traint anders (en breder) dan vlak werk.")
+        else:
+            klim_txt = (f"Je klom {int(elev)} meter — nauwelijks hoogteverschil, "
+                        f"dus het tempo zegt hier het meest.")
+        punten.append({"label": "Klim", "tekst": klim_txt})
+
     # pasfrequentie (hardlopen)
     cadence = rec.get("avg_cadence")
     if type_key in RUN_TYPES and cadence:
@@ -336,8 +414,11 @@ def analyse_activity(rec, peer_paces, profile):
     if te_uitleg:
         tekst = te_uitleg
         at = rec.get("anaerobic_te")
-        if at and at >= 2:
-            tekst += (" Ook het korte, explosieve werk kwam goed aan bod \u2014 neem de dag "
+        if at and at >= 3:
+            tekst += (" En je anaërobe vermogen (korte, explosieve inspanningen) werd "
+                      "duidelijk getraind — dat maakt je sneller, maar eist herstel.")
+        elif at and at >= 2:
+            tekst += (" Ook het korte, explosieve werk kwam goed aan bod — neem de dag "
                       "erna een beetje rustiger.")
         punten.append({"label": "Effect", "tekst": tekst})
 
@@ -357,14 +438,21 @@ def analyse_activity(rec, peer_paces, profile):
                         f"({_nl(f'{per_min:.0f}')} per minuut) \u2014 een rustige inspanning.")
         punten.append({"label": "Calorie\u00ebn", "tekst": kcal_txt})
 
-    # eindoordeel
-    if ate is not None and ate >= 4:
-        verdict = ("Zware training \u2014 neem de komende 1 \u00e0 2 dagen wat rustiger aan; "
+    # eindoordeel — in de termen van Garmins trainingseffect-schaal
+    if ate is not None and ate >= 5:
+        verdict = ("Overreaching — zwaarder dan je lichaam in één keer verwerkt; "
+                   "plan 2 rustige dagen en bouw dit niet elke week op.")
+    elif ate is not None and ate >= 4:
+        verdict = ("Zware training — neem de komende 1 à 2 dagen wat rustiger aan; "
                    "daar word je sterker van.")
     elif ate is not None and ate >= 3:
         verdict = "Sterke training \u2014 deze duwt je conditie duidelijk vooruit."
     elif ate is not None and ate >= 2:
         verdict = "Degelijke training \u2014 houdt je conditie op peil."
+    elif load and typische_belasting and load < typische_belasting * 0.5:
+        verdict = "Lichte sessie — goed voor beweging en herstel; geen zware belasting."
+    elif duration_min < 25:
+        verdict = "Korte sessie — goed om in beweging te blijven; geen zware belasting."
     elif intensity_pct and intensity_pct < 70:
         verdict = "Rustige training \u2014 goed voor je herstel, zonder extra belasting."
     else:

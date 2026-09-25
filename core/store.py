@@ -53,7 +53,8 @@ def init_db():
                 activity_id TEXT PRIMARY KEY, start_time TEXT, name TEXT,
                 type TEXT, duration_s REAL, distance_m REAL, avg_hr REAL,
                 max_hr REAL, calories REAL, elevation_m REAL, avg_cadence REAL,
-                aerobic_te REAL, anaerobic_te REAL, source TEXT);
+                aerobic_te REAL, anaerobic_te REAL, training_load REAL,
+                max_cadence REAL, source TEXT);
             CREATE TABLE IF NOT EXISTS training_plan (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, week TEXT NOT NULL,
                 weekday INTEGER NOT NULL, sport TEXT NOT NULL,
@@ -102,6 +103,12 @@ def init_db():
             conn.execute(f"INSERT OR IGNORE INTO {tabel}_nieuw SELECT {kopie} FROM {tabel}")
             conn.execute(f"DROP TABLE {tabel}")
             conn.execute(f"ALTER TABLE {tabel}_nieuw RENAME TO {tabel}")
+
+        # --- migratie: extra Garmin-velden per activiteit (belasting, piek-cadans) ---
+        activiteit_kolommen = [r["name"] for r in conn.execute("PRAGMA table_info(activities)")]
+        for kolom in ("training_load", "max_cadence"):
+            if kolom not in activiteit_kolommen:
+                conn.execute(f"ALTER TABLE activities ADD COLUMN {kolom} REAL")
 
 
 # ------------------------------------------------------------- instellingen
@@ -176,7 +183,8 @@ def get_metrics(days=30):
 
 _ACTIVITY_FIELDS = ("start_time", "name", "type", "duration_s", "distance_m",
                     "avg_hr", "max_hr", "calories", "elevation_m", "avg_cadence",
-                    "aerobic_te", "anaerobic_te", "source")
+                    "aerobic_te", "anaerobic_te", "training_load", "max_cadence",
+                    "source")
 
 
 def upsert_activity(rec):

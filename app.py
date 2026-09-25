@@ -336,14 +336,19 @@ def activities_page():
     for a in activities:
         if a.get("type") and a.get("distance_m") and a.get("duration_s"):
             pace_by_type.setdefault(a["type"], []).append(
-                (a["duration_s"] / (a["distance_m"] / 1000), a["activity_id"]))
+                {"pace": a["duration_s"] / (a["distance_m"] / 1000),
+                 "duur_s": a.get("duration_s") or 0,
+                 "activity_id": a["activity_id"]})
+    loads = [a["training_load"] for a in activities if a.get("training_load")]
+    typische_belasting = (sum(loads) / len(loads)) if loads else None
 
     rows, week = [], {"aantal": 0, "duur_s": 0, "afstand_m": 0, "kcal": 0}
     for a in activities:
-        peers = [pace for pace, aid in pace_by_type.get(a.get("type"), [])
-                 if aid != a["activity_id"]]
+        peers = [p for p in pace_by_type.get(a.get("type"), [])
+                 if p["activity_id"] != a["activity_id"]]
         rows.append({"rec": a,
-                     "an": activity_analysis.analyse_activity(a, peers, profile)})
+                     "an": activity_analysis.analyse_activity(
+                         a, peers, profile, typische_belasting)})
         if (a.get("start_time") or "")[:10] >= week_start:
             week["aantal"] += 1
             week["duur_s"] += a.get("duration_s") or 0
@@ -541,13 +546,21 @@ def manifest():
         "display": "standalone",
         "orientation": "portrait-primary",
         "background_color": "#11141a",
-        "theme_color": "#11141a",
+        # Lichte surface i.p.v. donker: Chrome kleurt de onderste Android-
+        # navigatiebalk (gesture-bar) met deze kleur; #11141a gaf daar een
+        # zwarte balk. In donkere modus volgen de systeembalken de
+        # theme-color metas in de HTML (die wél per prefers-color-scheme
+        # wisselen).
+        "theme_color": "#fafbfe",
+        # ?v=N cache-buster: Chrome bakt het launcher-icoon van een PWA in bij
+        # installatie of WebAPK-update; met een nieuwe URL forceert je verse
+        # bytes. Bij iconwijzigingen N verhogen.
         "icons": [
-            {"src": "/static/icons/icon-192.png", "sizes": "192x192",
+            {"src": "/static/icons/icon-192.png?v=3", "sizes": "192x192",
              "type": "image/png", "purpose": "any"},
-            {"src": "/static/icons/icon-512.png", "sizes": "512x512",
+            {"src": "/static/icons/icon-512.png?v=3", "sizes": "512x512",
              "type": "image/png", "purpose": "any"},
-            {"src": "/static/icons/icon-maskable-512.png", "sizes": "512x512",
+            {"src": "/static/icons/icon-maskable-512.png?v=3", "sizes": "512x512",
              "type": "image/png", "purpose": "maskable"},
         ],
     }

@@ -174,8 +174,10 @@ def _activity_record(item):
         "calories": _f(item.get("calories")),
         "elevation_m": _f(item.get("elevationGain")),
         "avg_cadence": _f(item.get("averageRunningCadenceInStepsPerMinute")),
+        "max_cadence": _f(item.get("maxRunningCadenceInStepsPerMinute")),
         "aerobic_te": _f(item.get("aerobicTrainingEffect")),
         "anaerobic_te": _f(item.get("anaerobicTrainingEffect")),
+        "training_load": _f(item.get("activityTrainingLoad")),
         "source": "garmin",
     }
 

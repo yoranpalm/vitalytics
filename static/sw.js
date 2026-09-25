@@ -1,8 +1,11 @@
 /* Service worker — app-shell caching zodat de PWA ook offline werkt.
-   Belangrijk: bij het aanpassen van style.css/app.js de CACHE-versie bumpen. */
-const CACHE = "vitalytics-md3-v139";
-const VERSION = "105";
-const SHELL = ["/", "/static/style.css?v=" + VERSION, "/static/app.js?v=" + VERSION,
+   Belangrijk: bij het aanpassen van style.css/app.js de CACHE bumpen én de
+   query-params verhogen in base.html/login.html; CSS_V/JS_V hier gelijk
+   houden aan die query-params, anders vindt de offline-fallback de URL niet. */
+const CACHE = "vitalytics-md3-v142";
+const CSS_V = "146";
+const JS_V = "53";
+const SHELL = ["/", "/static/style.css?v=" + CSS_V, "/static/app.js?v=" + JS_V,
                "/manifest.webmanifest", "/static/icons/icon-192.png", "/favicon.ico"];
 
 /* Deze bestanden altijd vers ophalen zodra de server bereikbaar is;
