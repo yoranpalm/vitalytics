@@ -17,7 +17,7 @@ $tar = Join-Path $env:TEMP "vitalytics-deploy.tar.gz"
 if (Test-Path $tar) { Remove-Item $tar -Force }
 
 Write-Host "1/3 Archief maken (zonder venv, data, caches - je data blijft op de server)..."
-tar -czf $tar --exclude=venv --exclude=.venv --exclude=__pycache__ --exclude=.git --exclude=data --exclude=*.tar.gz -C $Root .
+tar -czf $tar --exclude=venv --exclude=.venv --exclude=__pycache__ --exclude=.git --exclude=data --exclude=twa --exclude=*.tar.gz -C $Root .
 
 Write-Host "2/3 Uploaden naar ${Server}:$Doel ..."
 scp -P $SshPoort $tar "${Server}:/tmp/vitalytics-deploy.tar.gz"

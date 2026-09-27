@@ -15,9 +15,29 @@ __pycache__/
 venv/
 .venv/
 
+# ==== Android TWA/APK (Bubblewrap) ====
+twa/*.keystore
+twa/*.jks
+twa/keystore-*.txt
+twa/*.aab
+twa/app-release-*.apk
+twa/app-release-*.idsig
+
 # eigen scratch-bestanden en -logs (beginnen met _)
 _*
 
 # OS-/editor-meuk
 Thumbs.db
 .DS_Store
+
+# build-logjes van de TWA-toolchain (worden per build opnieuw aangemaakt)
+twa/build-*.txt
+
+# TWA-toolchain: sleutel (zonder extensie) en gegenereerde build-dirs
+twa/android-keystore
+twa/build/
+twa/.gradle/
+
+# gradle-buildoutputs zitten onder twa/app/build
+twa/app/build/
+twa/.gradle/
