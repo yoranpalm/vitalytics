@@ -2,29 +2,13 @@
 gaat en wat beter kan, op basis van zoveel mogelijk Garmin-metingen,
 activiteiten en maaltijden van de afgelopen dagen.
 
-Toon: op verzoek van de gebruiker afwisselend spits pestend ("dikzak",
-"anders word je nooit fit") en gewoon serieus; de
-adviespagina (advisor.SYSTEM) blijft zakelijker."""
+Wordt ververst bij elke geslaagde Garmin-sync en bewaard in de instellingen-
+tabel zodat het dashboard hem direct kan tonen. Zonder AI (of bij fouten)
+valt de module terug op een regelgebaseerde samenvatting - dezelfde
+filosofie als de adviesengine."""
 import json
 
 from . import advisor, ai_utils, store
-
-
-# Eigen systeemprompt: basis van de adviesengine + pestige toonlaag die alleen
-# voor de dashboardanalyse geldt. Na bijsturing van de gebruiker: wisselen
-# tussen plagerij en serieuze zinnen i.p.v. doorpest.
-SYSTEM_PESTIG = (advisor.SYSTEM
-    + " Toon: een coach met een scherpe tong, maar met mate. Pest spits en "
-      "humoristisch waar de data duidelijk aanleiding geeft (bijv. weinig "
-      "stappen, veel kcal boven doel, te kort geslapen): een bijnaam als "
-      "'dikzak' of 'kampioen van de bank' mag, mits de grap aan een concreet "
-      "cijfer hangt en eindigt in een motiverende opdracht. Wissel het af met "
-      "serieuze, zakelijke zinnen: ongeveer de helft van de punten is gewoon "
-      "serieus en onderbouwd, zeker bij belangrijke signalen als hoge rust-HF "
-      "of een dalende HRV — daar hoort geen grap bij. Alleen gedrag uit de "
-      "data wordt gepest (luiheid, te weinig slaap, kcal boven doel), nooit "
-      "ziekte, lichaamskenmerken of herkomst. Gaat het goed: oprecht "
-      "compliment, eventueel met een knipoog.")
 
 
 def huidige():
@@ -103,16 +87,15 @@ def _fallback(ctx):
     if slaap and slaap >= 7:
         gaat.append(f"Slaap is goed op orde: gemiddeld {slaap} uur per nacht.")
     elif slaap:
-        beter.append(f"Slaapgemiddelde is {slaap} uur - de telefoon wint het van "
-                     "de wekker; richt op 7,5 tot 8,5 uur door eerder naar bed te gaan.")
+        beter.append(f"Slaapgemiddelde is {slaap} uur - richt op 7,5 tot 8,5 uur "
+                     "door eerder naar bed te gaan.")
 
     stappen = ctx.get("steps_avg")
     if stappen and stappen >= 8000:
         gaat.append(f"Ruim voldoende beweging: gemiddeld {int(stappen)} stappen per dag.")
     elif stappen:
-        beter.append(f"Stappengemiddelde is {int(stappen)} - de bank heeft je "
-                     "gemist; een dagelijkse wandeling van 20-30 minuten brengt "
-                     "je richting 8.000.")
+        beter.append(f"Stappengemiddelde is {int(stappen)} - een dagelijkse wandeling "
+                     "van 20-30 minuten brengt je richting 8.000.")
 
     hrv_vandaag, hrv_basis = ctx.get("hrv_today"), ctx.get("hrv_baseline")
     if hrv_vandaag and hrv_basis:
@@ -141,7 +124,7 @@ def _fallback(ctx):
                     f"Slaapgemiddelde {slaap or '?'} uur, stappen gemiddeld "
                     f"{int(stappen) if stappen else '?'} per dag. "
                     "Hieronder de punten die opvallen uit je recente data.")
-    return {"samenvatting": samenvatting, "gaat_goed": gaat[:5], "kan_beter": beter[:5]}
+    return {"samenvatting": samenvatting, "gaat_goed": gaat[:4], "kan_beter": beter[:4]}
 
 
 PROMPT = """Analyseer de gezondheids- en voedingsdata hieronder en geef een korte,
@@ -164,24 +147,15 @@ HRV {hrv} ms (basislijn {hrv_basis} ms), gemiddeld {kcal_avg} kcal per dag geget
 Eisen:
 - Noem concrete cijfers uit de data in je punten; vermijd algemene
   leefstijlplatitudes zonder cijfers of aanleiding.
-- "samenvatting": 3-5 zinnen die de hoofdlijn schetsen (hoe gaat het overall,
-  wat valt op deze week, waarom dat telt) - iets voller dan losse steekwoorden,
-  maar geen betoog.
-- "gaat_goed" en "kan_beter": elk punt is één zin van hooguit ca. 22 woorden
-  (of twee heel korte zinnen) - compact genoeg voor de opsomming op het
-  dashboard, maar met een concrete aanleiding en een concrete opdracht.
-- "kan_beter": 3-5 concrete, uitvoerbare punten met aanleiding (welke meting, welke afwijking). Formuleer als coach, niet als doktersvoorschrift.
-- "gaat_goed": 2-4 punten; ook daar mag het met een grijns gezegd worden.
-- Toon: wissel af tussen spits pesten en serieus - ruwweg de helft van de
-  punten mag plagen (bijv. "Dikzak: 1.800 stappen gemiddeld - loop vanavond
-  een rondje."), de rest is gewoon zakelijk en onderbouwd met cijfers.
-  Elke spotterij hangt aan een concreet cijfer; alleen gedrag uit de data,
-  nooit ziekte of lichaam. De samenvatting blijft inhoudelijk en serieus,
-  hooguit met één lichte kanttekening. Gaat iets écht goed: oprecht
-  compliment, eventueel met een knipoog.
+- "samenvatting": 2-4 zinnen die de hoofdlijn schets (hoe gaat het overall,
+  wat valt op deze week).
+- "gaat_goed" en "kan_beter": elk punt is hooguit één korte zin van maximaal
+  15 woorden - de punten verschijnen als compacte opsomming op het dashboard,
+  dus geen lange zinnen of meerdere zinnen per punt.
+- "kan_beter": 2-4 concrete, uitvoerbare punten met aanleiding (welke meting, welke afwijking). Formuleer als coach, niet als doktersvoorschrift.
 
 Antwoord in het Nederlands, uitsluitend als JSON met exact deze structuur:
-{{"samenvatting": "<3-5 zinnen>", "gaat_goed": ["..."], "kan_beter": ["..."]}}"""
+{{"samenvatting": "<2-4 zinnen>", "gaat_goed": ["..."], "kan_beter": ["..."]}}"""
 
 
 def _model_keuze():
@@ -212,15 +186,15 @@ def generate():
             hrv_basis=ctx.get("hrv_baseline"), kcal_avg=ctx.get("kcal_avg_7d"))
         try:
             raw, ai_bron = ai_utils.generate(
-                prompt, system=SYSTEM_PESTIG, model=_model_keuze(),
+                prompt, system=advisor.SYSTEM, model=_model_keuze(),
                 temperature=0.4, timeout=240, num_ctx=16384, num_predict=1024,
                 json_mode=True)
             data = ai_utils.extract_json(raw)
             goed = [str(x).strip()[:300] for x in (data.get("gaat_goed") or [])
-                    if str(x).strip()][:5]
+                    if str(x).strip()][:4]
             beter = [str(x).strip()[:300] for x in (data.get("kan_beter") or [])
-                     if str(x).strip()][:5]
-            tekst = str(data.get("samenvatting") or "").strip()[:1600]
+                     if str(x).strip()][:4]
+            tekst = str(data.get("samenvatting") or "").strip()[:1200]
             if tekst and (goed or beter):
                 payload = {"samenvatting": tekst, "gaat_goed": goed, "kan_beter": beter}
                 bron = ai_bron
