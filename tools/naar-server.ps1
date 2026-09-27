@@ -1,12 +1,12 @@
 # Stuurt de Vitalytics-projectmap via SSH naar een Debian-server/CT (Proxmox)
 # en installeert/start de app daar met tools/debian-installeer.sh.
 #
-# Gebruik:   powershell -File tools\naar-server.ps1 -Server root@192.168.1.60
+# Gebruik:   powershell -File tools\naar-server.ps1 -Server root@<ip-van-de-server>
 #            powershell -File tools\naar-server.ps1 -Server root@<ip> -Doel /opt/vitalytics
 # Vereist:   OpenSSH-client (standaard in Windows 10/11) en SSH-toegang tot de CT.
 #            Eerste keer verbinden? ssh root@<ip> en accepteer de hostkey.
 param(
-  [Parameter(Mandatory = $true)][string]$Server,   # bijv. root@192.168.1.60
+  [Parameter(Mandatory = $true)][string]$Server,   # bijv. root@<ip-van-de-server>
   [string]$Doel = "/opt/vitalytics",               # map op de server
   [string]$SshPoort = "22"
 )

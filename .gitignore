@@ -41,3 +41,9 @@ twa/.gradle/
 # gradle-buildoutputs zitten onder twa/app/build
 twa/app/build/
 twa/.gradle/
+
+# === persoonlijk/geidentificeerd: bewust NIET in de publieke repo ===
+# De Android-TWA-toolchain en de Digital Asset Links bevatten het eigen
+# domein, package-id en de sleutel-vingerafdruk; deze blijven lokaal.
+twa/
+assetlinks.json

@@ -92,14 +92,19 @@ function toast(msg, ok = true) {
   snackTimer = setTimeout(() => { el.className = "snackbar"; }, 4000);
 }
 
-function busy(btn, on, label) {
+/* bezig: spinner in de knop, label blijft staan — geen losse statusregels */
+function busy(btn, on) {
   if (!btn) return;
   btn.disabled = on;
   if (on) {
-    btn.dataset.orig = btn.innerHTML; // innerHTML: icoontjes (sparkles) blijven behouden
-    btn.textContent = label || "Bezig…";
-  } else if (btn.dataset.orig) {
-    btn.innerHTML = btn.dataset.orig;
+    if (!btn.querySelector(".spinner")) {
+      const s = document.createElement("span");
+      s.className = "spinner";
+      btn.prepend(s);
+    }
+  } else {
+    const s = btn.querySelector(".spinner");
+    if (s) s.remove();
   }
 }
 
@@ -157,7 +162,7 @@ async function loadStatus() {
 function initDashboard() {
   const sync = $("#btn-sync");
   sync?.addEventListener("click", async () => {
-    busy(sync, true, "Syncen…");
+    busy(sync, true);
     try {
       const r = await api("/api/garmin/sync", { method: "POST" });
       toast(`Sync voltooid: ${r.dagen} dag(en) geïmporteerd`);
@@ -169,7 +174,7 @@ function initDashboard() {
 
   /* automatisch synchroniseren zodra de pagina voor het eerst in een half uur
      wordt geopend — de server beslist (throttle) of er echt gesynct wordt */
-  busy(sync, true, "Syncen…");
+  busy(sync, true);
   api("/api/garmin/auto-sync", { method: "POST" })
     .then((r) => {
       busy(sync, false);
@@ -184,36 +189,25 @@ function initDashboard() {
 /* ---------------- advies ---------------- */
 function initAdvice() {
   const aiBtn = $("#btn-advice-ai");
-  const status = $("#advice-status");
-  const config = $("#ai-config");
   let running = false;
 
+  /* AI-knop alleen actief als er een werkende AI is (lokaal of via API) */
   fetch("/api/health").then((r) => r.json()).then((h) => {
-    if (!config) return;
-    if (h.ai_api) {
-      config.textContent = `AI via ${h.ai_bron} \u2014 let op: je gezondheidsdata gaat hiervoor via de cloud.`;
-      aiBtn?.removeAttribute("disabled");
-      return;
-    }
+    if (h.ai_api) { aiBtn?.removeAttribute("disabled"); return; }
     if (!h.ollama) {
-      config.textContent = "AI niet beschikbaar (Ollama draait niet en er is geen API ingesteld) — de regelengine werkt altijd.";
       aiBtn?.setAttribute("disabled", "");
       if (aiBtn) aiBtn.title = "Start Ollama of stel een API in bij Instellingen";
     } else if (h.model_advice === "uit") {
-      config.textContent = "AI staat uit in Instellingen — de AI-knop is vergrendeld.";
       aiBtn?.setAttribute("disabled", "");
     } else {
-      const model = h.model_advice === "auto" ? `automatisch (${h.models[0]})` : h.model_advice;
-      config.textContent = `AI-model: ${model} — draait volledig lokaal via Ollama.`;
       aiBtn?.removeAttribute("disabled");
     }
   }).catch(() => {});
 
-  async function run(btn, busyLabel) {
-    if (running) { toast("Er loopt al een analyse — even geduld", false); return; }
+  async function run(btn) {
+    if (running) { return; }
     running = true;
-    busy(btn, true, busyLabel);
-    if (status) status.textContent = "De AI analyseert je metingen, activiteiten en maaltijden — dit kan tot enkele minuten duren…";
+    busy(btn, true);
     try {
       const r = await api("/api/advice/generate", {
         method: "POST",
@@ -224,13 +218,12 @@ function initAdvice() {
       setTimeout(() => location.reload(), 1100);
     } catch (e) {
       toast(e.message, false);
-      if (status) status.textContent = "";
       busy(btn, false);
       running = false;
     }
   }
 
-  aiBtn?.addEventListener("click", () => run(aiBtn, "Bezig met genereren…"));
+  aiBtn?.addEventListener("click", () => run(aiBtn));
 
   /* losse adviezen wissen (prullenbak in de kaartkop / accordionkop) */
   document.querySelectorAll(".del-advice").forEach((btn) => {
@@ -256,7 +249,6 @@ function initAdvice() {
   const vraagForm = $("#vraag-form");
   const vraagBtn = $("#btn-advice-vraag");
   const vraagInvoer = $("#vraag-invoer");
-  const vraagStatus = $("#vraag-status");
   const vraagUitvoer = $("#vraag-uitvoer");
   const vragen = [];
 
@@ -273,7 +265,7 @@ function initAdvice() {
       blok.className = "vraag-item";
       const q = document.createElement("p");
       q.className = "vraag-q";
-      q.innerHTML = "<b>Jouw vraag:</b> " + escapeHtml(v.vraag);
+      q.innerHTML = '<span class="vraag-label">Vraag</span><span>' + escapeHtml(v.vraag) + '</span>';
       const a = document.createElement("p");
       a.className = "vraag-a";
       a.textContent = v.antwoord;
@@ -289,12 +281,9 @@ function initAdvice() {
     e.preventDefault();
     const tekst = (vraagInvoer.value || "").trim();
     if (!tekst) { toast("Typ eerst een vraag", false); return; }
-    if (running) { toast("Er loopt al een analyse — even geduld", false); return; }
+    if (running) { return; }
     running = true;
-    busy(vraagBtn, true, "AI denkt na\u2026");
-    if (vraagStatus) {
-      vraagStatus.textContent = "De AI leest je recente data en beantwoordt je vraag — dit kan tot enkele minuten duren\u2026";
-    }
+    busy(vraagBtn, true);
     try {
       const r = await api("/api/advice/ask", {
         method: "POST",
@@ -304,11 +293,9 @@ function initAdvice() {
       vragen.push({ vraag: tekst, antwoord: r.antwoord, bron: r.bron });
       renderVragen();
       vraagInvoer.value = "";
-      if (vraagStatus) vraagStatus.textContent = "";
       toast("Vraag beantwoord");
     } catch (err) {
       toast(err.message, false);
-      if (vraagStatus) vraagStatus.textContent = "";
     } finally {
       busy(vraagBtn, false);
       running = false;
@@ -727,7 +714,7 @@ function initSettings() {
 
   $("#btn-garmin-login")?.addEventListener("click", async () => {
     const btn = $("#btn-garmin-login");
-    busy(btn, true, "Verbinden…");
+    busy(btn, true);
     try {
       await save(["garmin_email", "garmin_password", "sync_days"], null, "");
       await api("/api/garmin/login/start", {
@@ -778,7 +765,7 @@ function initSettings() {
 
   $("#btn-sync2")?.addEventListener("click", async (ev) => {
     const btn = ev.currentTarget;
-    busy(btn, true, "Syncen…");
+    busy(btn, true);
     try {
       const r = await api("/api/garmin/sync", { method: "POST" });
       toast(`Sync voltooid: ${r.dagen} dag(en)`);
@@ -901,7 +888,7 @@ function initSettings() {
 function initActivities() {
   const syncBtn = $("#btn-sync-act");
   syncBtn?.addEventListener("click", async () => {
-    busy(syncBtn, true, "Syncen…");
+    busy(syncBtn, true);
     try {
       const r = await api("/api/garmin/sync", { method: "POST" });
       toast(`Sync voltooid: ${r.dagen} dag(en) + ${r.activiteiten} activiteit(en)`);

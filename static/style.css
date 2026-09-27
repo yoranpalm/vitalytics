@@ -172,6 +172,13 @@ form.card .card-actions ~ .hint { margin-top: var(--sp-3); }
    gebruikers in staan); de afstand veld-r-knop blijft het vaste ritme */
 #users-lijst:not(:empty) { margin-bottom: var(--sp-4); }
 .status-line { margin-bottom: var(--sp-4); }
+/* status-regels: verborgen als er niets in staat — geen dode ruimte
+   onder de paginakop */
+.status-line:empty { display: none; }
+
+/* meals: de kop boven de dag-accordeons is een losse sectiekop (geen kaart);
+   dezelfde linkerlijn als de kaart-titels eronder */
+#meals-day-list .card-head { padding: 0 var(--sp-5); }
 
 /* -- layout: drawer + hoofdgebied -- */
 .drawer {
@@ -560,6 +567,17 @@ form.card .card-actions ~ .hint { margin-top: var(--sp-3); }
 .btn:hover { filter: brightness(1.08); box-shadow: var(--elev-1); }
 .btn:active { transform: scale(0.98); }
 .btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; transform: none; }
+/* bezig: draaiende cirkel in de knop i.p.v. losse statusregels */
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn .spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
 .btn.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
 .btn.danger {
   background: transparent;
@@ -908,12 +926,16 @@ input[type="file"][hidden] { display: none; }
 }
 
 /* -- inloggen -- */
+/* 100svh: kleine-viewport-hoogte (mobiel correct); overflow uit — er is
+   nooit meer content dan het scherm, dus geen scrollbar */
 .login-body {
   min-height: 100vh;
+  min-height: 100svh;
   display: grid;
   place-items: center;
   padding: var(--sp-4);
   background: var(--surface);
+  overflow: hidden;
 }
 .login-kaart {
   width: min(380px, 100%);
@@ -922,8 +944,9 @@ input[type="file"][hidden] { display: none; }
   padding: var(--sp-6);
   box-shadow: var(--elev-1);
 }
+/* logo -> titel: vaste ritme; de extra ademruimte zit boven het veld */
 .login-logo { display: grid; place-items: center; margin-bottom: var(--sp-4); }
-.login-kaart h1 { margin: 0 0 var(--sp-4); font-size: var(--fs-20); font-weight: 500; text-align: center; }
+.login-kaart h1 { margin: 0 0 var(--sp-6); font-size: var(--fs-20); font-weight: 500; text-align: center; }
 .login-kaart .field { margin-bottom: var(--sp-3); }
 .login-kaart .btn { width: 100%; margin-top: var(--sp-2); }
 .login-hint {
@@ -1376,11 +1399,13 @@ input[type="file"][hidden] { display: none; }
   .drawer-brand, .drawer-foot { display: none; }
   /* compacte merkrij bovenin: logo + naam, zodat je in de (fullscreen) app
      ziet waar je zit; zelfde breekpunt als de onderste navigatiebalk */
+  /* padding alleen onder: de linkerlijn komt zo exact op de content-lijn
+     (16px), gelijk met de kaarten en de paginakop */
   .mob-brand {
     display: flex;
     align-items: center;
     gap: var(--sp-2);
-    padding: 2px 2px var(--sp-3);
+    padding: 0 0 var(--sp-3);
     color: var(--on-surface);
   }
   .mob-brand svg { width: 26px; height: 26px; }
@@ -1635,11 +1660,22 @@ input[type="file"][hidden] { display: none; }
   gap: var(--sp-3);
 }
 #vraag-form .field { width: 100%; }
+#vraag-uitvoer:not(:empty) { margin-top: var(--sp-5); }
 .vraag-item {
-  padding: var(--sp-3) 0;
-  border-top: 1px solid var(--outline-variant);
+  background: var(--surface-container-low);
+  border-radius: var(--radius-s);
+  padding: var(--sp-4);
+  margin-top: var(--sp-3);
 }
-.vraag-item:first-child { border-top: none; padding-top: 0; }
-.vraag-q { color: var(--on-surface); }
-.vraag-a { white-space: pre-wrap; margin: var(--sp-2) 0 0; }
+.vraag-item:first-child { margin-top: 0; }
+.vraag-q { display: flex; gap: var(--sp-2); align-items: baseline; color: var(--on-surface); }
+.vraag-label {
+  flex: none;
+  font-size: var(--fs-11);
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.vraag-a { white-space: pre-wrap; margin: var(--sp-2) 0 0; font-size: 15px; line-height: 1.6; }
 .vraag-item .hint { margin: var(--sp-2) 0 0; }

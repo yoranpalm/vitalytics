@@ -195,7 +195,7 @@
       <button id="btn-user-add" class="btn">Account opslaan</button>
       <span class="hint" id="users-status"></span>
     </div>
-    <p class="hint">Ingelogd als <b>{{ session.get('gebruiker') }}</b> · <a href="/uitloggen">uitloggen</a></p>
+    <p class="hint">Ingelogd als <b>{{ session.get('gebruiker') }}</b> · <a href="/logout">uitloggen</a></p>
   </form>
 
   {% if not session.get('demo') %}{# gevarenzone: geen demo #}

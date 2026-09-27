@@ -29,6 +29,11 @@ SYSTEM = (
     "Geen losse steekwoorden maar volledige, uitgebreide uitleg in begrijpelijke taal. "
     "Je advies is educatief en geen medisch advies.")
 
+# Vraagfunctie: zelfde rol, maar géén JSON — antwoord in lopende tekst
+SYSTEM_VRAAG = SYSTEM.replace(
+    "en uitsluitend met geldige JSON",
+    "in gewone, lopende tekst (geen JSON, geen codeblokken)")
+
 
 def _f(value):
     try:
@@ -433,9 +438,21 @@ Eisen:
 - Onderbouw met concrete cijfers uit de data hierboven en leg vaktermen kort in gewone woorden uit.
 - Ca. 80-300 woorden; korter mag als een kort antwoord volstaat.
 - Dit is educatieve uitleg, geen medisch advies; bij twijfel of klachten verwijs je naar een arts."""
-    raw, bron = ai_utils.generate(prompt, system=SYSTEM, model=model, temperature=0.5,
+    raw, bron = ai_utils.generate(prompt, system=SYSTEM_VRAAG, model=model, temperature=0.5,
                                   timeout=600, num_ctx=16384, num_predict=1600)
     antwoord = (raw or "").strip()
     if not antwoord:
         raise AdvisorError("De AI gaf een leeg antwoord — probeer de vraag opnieuw.")
+    # Vangnet: sommige modellen leveren ondanks de instructie JSON; als er een
+    # bruikbare sleutel in zit, pak dan de tekst eruit.
+    if antwoord.startswith("{") and antwoord.endswith("}"):
+        try:
+            data = ai_utils.extract_json(antwoord)
+            for k in ("antwoord", "antw", "tekst", "samenvatting", "advice"):
+                v = data.get(k)
+                if isinstance(v, str) and v.strip():
+                    antwoord = v.strip()
+                    break
+        except Exception:
+            pass
     return {"antwoord": antwoord[:6000], "bron": bron}
