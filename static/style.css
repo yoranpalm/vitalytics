@@ -55,11 +55,11 @@
 
   /* motion — één set duren en easing voor de hele app; op mobiel (≤767px)
    staan de subtielere waarden hieronder */
-  --dur-fast: 0.12s;
-  --dur-med: 0.2s;
-  --dur-slow: 0.26s;
+  --dur-fast: 0.14s;
+  --dur-med: 0.24s;
+  --dur-slow: 0.32s;
   --ease: cubic-bezier(0.2, 0, 0, 1);
-  --reveal-y: 6px;
+  --reveal-y: 10px;
 
   --fs-11: 11px;
   --fs-12: 12px;
@@ -1412,15 +1412,15 @@ input[type="file"][hidden] { display: none; }
   .mob-brand-text { display: flex; align-items: baseline; gap: var(--sp-2); line-height: 20px; }
   .mob-brand-text b { font-size: var(--fs-16); font-weight: 600; }
   .mob-brand-sub { font-size: var(--fs-12); color: var(--on-surface-variant); }
-  /* net iets meer beweging op mobiel dan de vorige stap: popups mogen
-     voelbaar binnenkomen, duren wel kort (consistent met de rest) */
-  :root { --reveal-y: 4px; --dur-slow: 0.24s; --dur-med: 0.18s; }
-  .modal[open] { animation: modal-in 0.22s var(--ease); }
-  .modal[open]::backdrop { animation: fade-in 0.22s ease; }
-  .js .spark polyline { animation-duration: 0.65s; animation-delay: 0.15s; }
-  .js [data-reveal].revealed .spark circle { animation-delay: 0.8s; }
-  .js [data-reveal].revealed .progress > span { animation-duration: 0.55s; }
-  .progress > span { transition-duration: 0.55s; }
+  /* net zichtbaarder op mobiel: iets langere duren en meer beweging,
+     kort genoeg om native te blijven voelen */
+  :root { --reveal-y: 8px; --dur-slow: 0.28s; --dur-med: 0.2s; }
+  .modal[open] { animation: modal-in 0.26s var(--ease); }
+  .modal[open]::backdrop { animation: fade-in 0.26s ease; }
+  .js .spark polyline { animation-duration: 0.75s; animation-delay: 0.15s; }
+  .js [data-reveal].revealed .spark circle { animation-delay: 0.9s; }
+  .js [data-reveal].revealed .progress > span { animation-duration: 0.65s; }
+  .progress > span { transition-duration: 0.65s; }
   .grid [data-reveal]:nth-child(2) { animation-delay: 25ms; }
   .grid [data-reveal]:nth-child(3) { animation-delay: 50ms; }
   .grid [data-reveal]:nth-child(4) { animation-delay: 75ms; }
