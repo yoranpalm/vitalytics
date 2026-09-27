@@ -147,7 +147,6 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
-                pin_hash TEXT, pin_len INTEGER,
                 created_at TEXT);
         """)
 
@@ -189,13 +188,6 @@ def init_db():
         for kolom in ("training_load", "max_cadence"):
             if kolom not in activiteit_kolommen:
                 conn.execute(f"ALTER TABLE activities ADD COLUMN {kolom} REAL")
-
-        # --- migratie: pincode-login per account (lockscreen op /login) ---
-        gebruiker_kolommen = [r["name"] for r in conn.execute("PRAGMA table_info(users)")]
-        if "pin_hash" not in gebruiker_kolommen:
-            conn.execute("ALTER TABLE users ADD COLUMN pin_hash TEXT")
-        if "pin_len" not in gebruiker_kolommen:
-            conn.execute("ALTER TABLE users ADD COLUMN pin_len INTEGER")
 
 
 # ------------------------------------------------------------- instellingen
@@ -379,11 +371,10 @@ def delete_meal(meal_id):
 # ------------------------------------------------------------- gebruikers
 
 def gebruikers():
-    """Alle accounts (zonder wachtwoord-hashes); pin_gezet voor het instellingen-UI."""
+    """Alle accounts (zonder wachtwoord-hashes)."""
     with _connect() as conn:
         return [dict(r) for r in conn.execute(
-            "SELECT id, username, created_at, "
-            "(pin_hash IS NOT NULL) AS pin_gezet FROM users ORDER BY username")]
+            "SELECT id, username, created_at FROM users ORDER BY username")]
 
 
 def aantal_gebruikers():
@@ -421,38 +412,6 @@ def controleer_login(username, wachtwoord):
 def verwijder_gebruiker(user_id):
     with _LOCK, _connect() as conn:
         conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-
-
-def zet_pin(user_id, pin):
-    """Pincode (4-8 cijfers) instellen voor een account, of wissen (pin=None/'').
-    Wordt gehasht bewaard, zoals het wachtwoord; pin_len onthoudt de lengte
-    zodat het cijferblok op het inlogscherm automatisch kan verzenden."""
-    h = generate_password_hash(str(pin)) if pin else None
-    with _LOCK, _connect() as conn:
-        conn.execute("UPDATE users SET pin_hash = ?, pin_len = ? WHERE id = ?",
-                     (h, len(str(pin)) if pin else None, user_id))
-
-
-def gebruiker_via_pin(pin):
-    """Account waarvan de pincode klopt (demo uitgezonderd: read-only), of None."""
-    with _connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM users WHERE pin_hash IS NOT NULL AND username != 'demo' "
-            "ORDER BY id").fetchall()
-    for row in rows:
-        if check_password_hash(row["pin_hash"], str(pin)):
-            return dict(row)
-    return None
-
-
-def pin_login_info():
-    """Voor het inlogscherm: naam en lengte van de eerste ingestelde pincode
-    (demo uitgezonderd), of None als er geen is."""
-    with _connect() as conn:
-        row = conn.execute(
-            "SELECT username, pin_len FROM users WHERE pin_hash IS NOT NULL "
-            "AND username != 'demo' ORDER BY id LIMIT 1").fetchone()
-    return dict(row) if row else None
 
 
 # ------------------------------------------------------- trainingsschema
