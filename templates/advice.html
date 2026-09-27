@@ -7,7 +7,6 @@
     <p class="page-sub">Persoonlijke training en voeding, gebaseerd op jouw data.</p>
   </div>
   <div class="header-actions">
-    <button id="btn-advice-rules" class="btn tonal">Snelle adviezen (regelengine)</button>
     <button id="btn-advice-ai" class="btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 18l-2.4-6.6L3 12l6.6-2.4L12 3Z"/><path d="M18.8 15.2l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1 1-2.6Z"/></svg><span>AI-advies genereren</span></button>
   </div>
 </header>
@@ -69,6 +68,22 @@
 {%- endmacro %}
 
 <div class="advice-col">
+<section class="card" id="vraag-kaart" data-reveal>
+  <h2 class="card-title">Stel je eigen vraag</h2>
+  <p class="hint card-intro">Vraag de AI wat je wilt over je gezondheid, training of voeding — hij leest je recente metingen, activiteiten en maaltijden erbij.</p>
+  <form id="vraag-form">
+    <label class="field">
+      <span class="field-box area">
+        <textarea id="vraag-invoer" rows="3" maxlength="2000" placeholder=" " autocomplete="off"></textarea>
+        <span class="flabel">Je vraag (max. 2000 tekens)</span>
+      </span>
+    </label>
+    <button id="btn-advice-vraag" class="btn" type="submit">Vraag stellen</button>
+  </form>
+  <p id="vraag-status" class="hint status-line"></p>
+  <div id="vraag-uitvoer"></div>
+</section>
+
   {% for a in history %}
     {% if loop.first %}
     <article class="card latest" data-reveal>
@@ -99,7 +114,7 @@
     {% endif %}
   {% else %}
   <div class="card empty" data-reveal>
-    <p>Laad eerst data (demo of Garmin) en klik dan op <b>AI-advies genereren</b>. Voor een snelle berekening zonder AI kies je <b>Snelle adviezen</b>.</p>
+    <p>Laad eerst data (demo of Garmin) en klik dan op <b>AI-advies genereren</b>.</p>
   </div>
   {% endfor %}
 </div>

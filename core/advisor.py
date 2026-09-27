@@ -385,3 +385,57 @@ def generate(mode=None):
     payload = {**payload, "note": note}
     advice_id = store.save_advice(payload.get("readiness"), payload, source)
     return {"id": advice_id, "source": source, "note": note, **payload}
+
+
+def stel_vraag(vraag):
+    """Beantwoord een vrije vraag van de gebruiker over de eigen gezondheidsdata.
+
+    Zelfde feitenkader als de adviesengine (metingen, activiteiten, maaltijden
+    plus de regelengine-cijfers als referentie), maar met een open vraag en een
+    gewoon tekstantwoord (geen JSON). Bij een cloudprovider gaat het
+    geanonimiseerde datablok mee, zoals bij het advies. AI uitgeschakeld of
+    onbereikbaar? Dan AdvisorError met een leesbare melding."""
+    setting = store.get_setting("model_advice") or "auto"
+    anoniem = ai_utils.use_api()
+    if setting == "uit" and not anoniem:
+        raise AdvisorError("AI staat uit in Instellingen — zet hem aan of stel een API in.")
+    model = None
+    if not anoniem:
+        model = (setting if setting not in ("auto", "", None, "uit")
+                 else (_first_local_model() or _first_text_model()))
+        if not model:
+            raise AdvisorError("Geen Ollama-model gevonden — start Ollama of stel een API in bij Instellingen.")
+
+    ctx = compute_context()
+    fallback = rule_based(ctx)
+    metrics_txt, meals_txt, acts_txt = _data_block(ctx, anoniem)
+    p = ctx["profile"]
+    prompt = f"""Hieronder staan de gezondheidsdata van de gebruiker plus een paar vooraf berekende cijfers. Gebruik ze om de VRAAG onderaan direct te beantwoorden.
+
+Profiel: leeftijd={p.get('age') or 'onbekend'}, geslacht={p.get('sex') or 'onbekend'}, lengte={p.get('height_cm') or 'onbekend'} cm, gewicht={p.get('weight_kg') or 'onbekend'} kg, doel={p.get('goal') or 'presteren'}, stappendoel={p.get('step_goal') or 'onbekend'}.
+
+Dagmetingen (nieuwste laatste):
+{metrics_txt}
+
+Recente activiteiten:
+{acts_txt}
+
+Maaltijden vandaag: {meals_txt} (totaal {ctx['consumed']} kcal).
+Gemiddelden laatste 7 dagen: stappen {ctx.get('steps_avg')}, rust-HF {ctx.get('rhr_avg')}, slaap {ctx.get('sleep_avg')} uur, HRV {ctx.get('hrv_avg')} ms (basislijn {ctx.get('hrv_baseline')} ms).
+
+Berekende cijfers (definitief, door de regelengine): readyheid {fallback['readiness']}/100, kcal-doel {fallback['voeding']['kcal_doel']}, nog overgebleven vandaag {fallback['voeding']['kcal_over']} kcal, eiwitdoel {fallback['voeding']['eiwit_g']} g. Positief "overgebleven" = er is nog ruimte; negatief = er is al méér gegeten dan het doel.
+
+VRAAG: {vraag}
+
+Eisen:
+- Antwoord in het Nederlands, in gewone lopende tekst (geen JSON, geen markdown-sterretjes).
+- Antwoord direct op de vraag; geef alleen een volledig dagadvies als daar expliciet om gevraagd wordt.
+- Onderbouw met concrete cijfers uit de data hierboven en leg vaktermen kort in gewone woorden uit.
+- Ca. 80-300 woorden; korter mag als een kort antwoord volstaat.
+- Dit is educatieve uitleg, geen medisch advies; bij twijfel of klachten verwijs je naar een arts."""
+    raw, bron = ai_utils.generate(prompt, system=SYSTEM, model=model, temperature=0.5,
+                                  timeout=600, num_ctx=16384, num_predict=1600)
+    antwoord = (raw or "").strip()
+    if not antwoord:
+        raise AdvisorError("De AI gaf een leeg antwoord — probeer de vraag opnieuw.")
+    return {"antwoord": antwoord[:6000], "bron": bron}
