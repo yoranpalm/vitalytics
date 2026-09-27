@@ -28,10 +28,12 @@ app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 app.config["TEMPLATES_AUTO_RELOAD"] = True  # lokale tool: template-wijzigingen direct zien
 # cookie alleen naar dezelfde site (geen cross-site POSTs) — past bij de API's
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-# sessie blijft 30 dagen actief — ook na het sluiten van de browser. De cookie
+# sessie blijft 365 dagen actief — ook na het sluiten van de browser. De cookie
 # wordt bij elk bezoek verlengd (SESSION_REFRESH_EACH_REQUEST), dus wie de app
 # regelmatig gebruikt hoeft nooit opnieuw in te loggen; uitloggen wist hem direct.
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
+# Let op: wie in Chrome "cookies en sitegegevens" wist, is alsnog uitgelogd —
+# de login zit in die cookie en kan daar niet omheen.
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
 app.json.ensure_ascii = False
 
 store.init_db()
@@ -221,8 +223,8 @@ def _vereist_login():
                     return jsonify({"error": "Demo-account: alleen bekijken"}), 403
                 return redirect("/")
         return None
-    if (request.endpoint or "") in ("login", "uitloggen", "static", "favicon", "sw_js",
-                                    "pin_login"):
+    if (request.endpoint or "") in ("login", "logout", "static", "favicon", "sw_js",
+                                    "manifest", "well_known_assetlinks"):
         return None
     if request.path.startswith("/api/"):
         return jsonify({"error": "Niet ingelogd"}), 401
@@ -251,16 +253,13 @@ def login():
                 if account["username"] == "demo":
                     session["demo"] = True  # read-only: alleen rondkijken
                 return redirect("/")
-            time.sleep(1.0)  # brute-force afremmen, net als bij de pincode
+            time.sleep(1.0)  # brute-force afremmen
             fout = "Onjuiste logingegevens."
-    pin = store.pin_login_info()
-    return render_template("login.html", fout=fout, geen_gebruikers=geen,
-                           pin_len=(pin or {}).get("pin_len"),
-                           pin_naam=((pin or {}).get("username") or "").capitalize())
+    return render_template("login.html", fout=fout, geen_gebruikers=geen)
 
 
-@app.route("/uitloggen")
-def uitloggen():
+@app.route("/logout")
+def logout():
     session.clear()
     return redirect("/login")
 
@@ -620,6 +619,25 @@ def sw_js():
     return send_from_directory(app.static_folder, "sw.js", mimetype="text/javascript")
 
 
+@app.route("/.well-known/assetlinks.json")
+def well_known_assetlinks():
+    """Digital Asset Links voor de Android TWA (APK uit Bubblewrap).
+
+    Chrome moet dit bestand ONBEVOEGD kunnen ophalen om de app als TWA
+    te verifiëren (anders blijft de URL-balk zichtbaar). De inhoud bevat
+    alleen het package-id en de publieke SHA-256-vingerafdruk van de
+    ondertekeningssleutel - geen geheimen. Gegenereerd door
+    `bubblewrap fingerprint generateAssetLinks` en opgeslagen als
+    assetlinks.json in de projectroot.
+    """
+    pad = os.path.join(app.root_path, "assetlinks.json")
+    if os.path.isfile(pad):
+        with open(pad, "r", encoding="utf-8") as f:
+            inhoud = f.read()
+        return app.response_class(inhoud, mimetype="application/json")
+    return jsonify({"error": "assetlinks.json ontbreekt (nog niet gegenereerd)"}), 404
+
+
 # ---------------------------------------------------------------- api
 
 @app.route("/api/health")
@@ -653,13 +671,13 @@ def api_settings():
     return jsonify({"ok": True, "opgeslagen": saved})
 
 
-@app.route("/api/gebruikers", methods=["GET"])
-def api_gebruikers():
+@app.route("/api/users", methods=["GET"])
+def api_users():
     return jsonify(store.gebruikers())
 
 
-@app.route("/api/gebruikers", methods=["POST"])
-def api_gebruiker_opslaan():
+@app.route("/api/users", methods=["POST"])
+def api_user_save():
     """Account aanmaken; bestaat de naam al, dan wordt het wachtwoord vernieuwd."""
     data = request.get_json(force=True, silent=True) or {}
     gebruiker = (data.get("gebruiker") or "").strip()
@@ -672,8 +690,8 @@ def api_gebruiker_opslaan():
     return jsonify({"ok": True})
 
 
-@app.route("/api/gebruikers/<int:user_id>", methods=["DELETE"])
-def api_gebruiker_verwijder(user_id):
+@app.route("/api/users/<int:user_id>", methods=["DELETE"])
+def api_user_delete(user_id):
     namen = {u["id"]: u["username"] for u in store.gebruikers()}
     if user_id not in namen:
         return jsonify({"error": "Account niet gevonden"}), 404
@@ -682,47 +700,6 @@ def api_gebruiker_verwijder(user_id):
     if store.aantal_gebruikers() <= 1:
         return jsonify({"error": "Dit is het enige account"}), 400
     store.verwijder_gebruiker(user_id)
-    return jsonify({"ok": True})
-
-
-@app.route("/api/login/pin", methods=["POST"])
-def pin_login():
-    """Lockscreen-login: pincode controleren en direct inloggen op dat account.
-    Publiek endpoint (net als /login); verkeerde pogingen worden bewust met
-    een seconde vertraagd — een pincode is kort en dit endpoint is open."""
-    data = request.get_json(silent=True) or {}
-    pin = str(data.get("pin") or "").strip()
-    if not (pin.isdigit() and 4 <= len(pin) <= 8):
-        return jsonify({"error": "Ongeldige pincode"}), 400
-    account = store.gebruiker_via_pin(pin)
-    if not account:
-        time.sleep(1.0)
-        return jsonify({"error": "Onjuiste pincode"}), 401
-    session["gebruiker"] = account["username"]
-    return jsonify({"ok": True})
-
-
-@app.route("/api/gebruikers/<int:user_id>/pin", methods=["POST"])
-def api_gebruiker_pin(user_id):
-    """Pincode instellen (4-8 cijfers): dit account kan daarna vanaf het
-    inlogscherm via het cijferblok worden geopend."""
-    namen = {u["id"]: u["username"] for u in store.gebruikers()}
-    if user_id not in namen:
-        return jsonify({"error": "Account niet gevonden"}), 404
-    if namen[user_id] == "demo":
-        return jsonify({"error": "Het demo-account kan geen pincode hebben"}), 400
-    data = request.get_json(force=True, silent=True) or {}
-    pin = str(data.get("pin") or "").strip()
-    if not (pin.isdigit() and 4 <= len(pin) <= 8):
-        return jsonify({"error": "Pincode: 4 tot 8 cijfers, alleen cijfers"}), 400
-    store.zet_pin(user_id, pin)
-    return jsonify({"ok": True})
-
-
-@app.route("/api/gebruikers/<int:user_id>/pin", methods=["DELETE"])
-def api_gebruiker_pin_weg(user_id):
-    """Pincode wissen; het account blijft bereikbaar met wachtwoord."""
-    store.zet_pin(user_id, None)
     return jsonify({"ok": True})
 
 
@@ -989,6 +966,24 @@ def api_advice_generate():
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return jsonify({"error": f"Advies genereren mislukt: {exc}"}), 500
+
+
+@app.route("/api/advice/ask", methods=["POST"])
+def api_advice_ask():
+    """Vrije vraag aan de AI over de eigen gezondheidsdata (los van het vaste
+    dagadvies). Zelfde feitenkader als de adviesengine; antwoord is tekst."""
+    data = request.get_json(force=True, silent=True) or {}
+    vraag = (data.get("vraag") or "").strip()
+    if not vraag:
+        return jsonify({"error": "Typ eerst een vraag."}), 400
+    if len(vraag) > 2000:
+        return jsonify({"error": "De vraag is te lang (maximaal 2000 tekens)."}), 400
+    try:
+        return jsonify(advisor.stel_vraag(vraag))
+    except advisor.AdvisorError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": f"Vraag beantwoorden mislukt: {exc}"}), 500
 
 
 @app.route("/api/advice/<int:advice_id>", methods=["DELETE"])

@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/style.css?v=151">
+<link rel="stylesheet" href="/static/style.css?v=166">
 </head>
 <body class="{{ 'demo' if session.get('demo') else '' }}">
 
@@ -63,12 +63,18 @@
 </aside>
 
 <main class="main">
-  <div class="page">{% block content %}{% endblock %}</div>
+  <div class="page">
+    <header class="mob-brand">
+      {{ icon_logo }}
+      <span class="mob-brand-text"><b>Vitalytics</b><span class="mob-brand-sub">AI-coach</span></span>
+    </header>
+    {% block content %}{% endblock %}
+  </div>
 </main>
 
 <div id="snackbar" class="snackbar" role="status" aria-live="polite"></div>
 
-<script src="/static/app.js?v=55"></script>
+<script src="/static/app.js?v=57"></script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () =>

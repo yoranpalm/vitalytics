@@ -53,6 +53,14 @@
   --sp-10: 40px;
   --sp-16: 64px;
 
+  /* motion — één set duren en easing voor de hele app; op mobiel (≤767px)
+   staan de subtielere waarden hieronder */
+  --dur-fast: 0.12s;
+  --dur-med: 0.2s;
+  --dur-slow: 0.26s;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --reveal-y: 6px;
+
   --fs-11: 11px;
   --fs-12: 12px;
   --fs-14: 14px;
@@ -186,6 +194,10 @@ form.card .card-actions ~ .hint { margin-top: var(--sp-3); }
 .brand-text { display: flex; flex-direction: column; line-height: 20px; }
 .brand-text b { font-size: var(--fs-16); font-weight: 600; }
 .brand-text span { font-size: var(--fs-12); color: var(--on-surface-variant); }
+
+/* merkrij alleen voor mobiel (de drawer met logo is daar verborgen); op
+   desktop/tablets met zijrail staat de branding al in de drawer */
+.mob-brand { display: none; }
 
 .drawer-nav { display: flex; flex-direction: column; gap: var(--sp-1); }
 .nav-item {
@@ -610,7 +622,7 @@ form.card .card-actions ~ .hint { margin-top: var(--sp-3); }
   transition: border-color 0.15s;
 }
 .field-box:focus-within { border-color: var(--primary); }
-.field-box input, .field-box select {
+.field-box input, .field-box select, .field-box textarea {
   width: 100%;
   height: 100%;
   padding: 0 16px;
@@ -621,6 +633,18 @@ form.card .card-actions ~ .hint { margin-top: var(--sp-3); }
   font-family: inherit;
   font-size: var(--fs-16);
 }
+/* multiline-variant: de standaard field-box is 48px en voor losse vragen
+   (textarea) mag de box meegroeien; het label zweeft daar bovenin i.p.v.
+   in het midden */
+.field-box.area { height: auto; min-height: 96px; border-radius: var(--radius-s); }
+.field-box.area textarea {
+  height: 100%;
+  min-height: 96px;
+  padding: 20px 16px 10px;
+  resize: vertical;
+  line-height: 1.45;
+}
+.field-box.area .flabel { top: 22px; transform: none; }
 .field-box .flabel {
   position: absolute;
   left: 16px;
@@ -637,7 +661,9 @@ form.card .card-actions ~ .hint { margin-top: var(--sp-3); }
 }
 .field-box input:focus ~ .flabel,
 .field-box input:not(:placeholder-shown) ~ .flabel,
-.field-box select ~ .flabel {
+.field-box select ~ .flabel,
+.field-box textarea:focus ~ .flabel,
+.field-box textarea:not(:placeholder-shown) ~ .flabel {
   top: 0;
   transform: translateY(-50%);
   left: 12px;
@@ -857,7 +883,7 @@ input[type="file"][hidden] { display: none; }
   opacity: 0;
   pointer-events: none;
   box-shadow: var(--elev-3);
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) ease;
 }
 .snackbar::before {
   content: "";
@@ -871,8 +897,8 @@ input[type="file"][hidden] { display: none; }
 .snackbar.show {
   opacity: 1;
   transform: translate(-50%, 0);
-  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1),
-              transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+  transition: opacity var(--dur-slow) var(--ease),
+              transform var(--dur-slow) var(--ease);
 }
 /* fout: M3 error-container + uitroepteken-icoon */
 .snackbar.err { background: var(--error-container); color: var(--on-error-container); }
@@ -934,91 +960,11 @@ input[type="file"][hidden] { display: none; }
   mask: var(--icoon-fout) center / contain no-repeat;
 }
 
-/* -- lockscreen: pincode-login (cijferblok, zoals een telefoon) -- */
-.pin-scherm { text-align: center; }
-.pin-titel { margin: 0 0 var(--sp-1); font-size: var(--fs-20); font-weight: 500; }
-.pin-sub {
-  margin: 0;
-  font-size: var(--fs-14);
-  color: var(--on-surface-variant);
-}
-.pin-dots {
-  display: flex;
-  justify-content: center;
-  gap: var(--sp-3);
-  margin: var(--sp-4) 0 var(--sp-2);
-  min-height: 14px;
-}
-.pin-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid var(--outline);
-  transition: background 0.15s, border-color 0.15s, transform 0.15s;
-}
-.pin-dot.gevuld {
-  background: var(--primary);
-  border-color: var(--primary);
-  transform: scale(1.15);
-}
-.pin-fout {
-  min-height: 18px;
-  margin: 0 0 var(--sp-3);
-  font-size: var(--fs-12);
-  color: var(--error);
-}
-.pin-pad {
-  display: grid;
-  grid-template-columns: repeat(3, 68px);
-  gap: var(--sp-3);
-  justify-content: center;
-  margin: var(--sp-3) 0 var(--sp-2);
-}
-.pin-toets {
-  width: 68px;
-  height: 68px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  line-height: 1;
-  background: var(--surface-container-high);
-  color: var(--on-surface);
-  font: inherit;
-  font-size: var(--fs-20);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.08s;
-}
-.pin-toets:active { background: var(--primary-container); transform: scale(0.94); }
-.pin-functie { font-size: var(--fs-14); color: var(--on-surface-variant); }
-.login-wissel {
-  display: block;
-  margin: var(--sp-3) auto 0;
-  padding: var(--sp-2);
-  border: none;
-  background: none;
-  color: var(--primary);
-  font: inherit;
-  font-size: var(--fs-14);
-  text-decoration: underline;
-  cursor: pointer;
-}
-@keyframes pin-schud {
-  0%, 100% { transform: none; }
-  20% { transform: translateX(-8px); }
-  40% { transform: translateX(8px); }
-  60% { transform: translateX(-5px); }
-  80% { transform: translateX(5px); }
-}
-.pin-scherm.pin-fout-schud { animation: pin-schud 0.36s cubic-bezier(0.2, 0, 0, 1); }
-
 /* ==========================================================================
    -- motion -- subtiele M3-overgangen; met respect voor reduced motion
    ========================================================================== */
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(var(--reveal-y)); }
   to { opacity: 1; transform: none; }
 }
 @keyframes fade-in {
@@ -1040,8 +986,8 @@ input[type="file"][hidden] { display: none; }
 
 /* kaarten en lijstrijen komen zacht binnen zodra ze in beeld komen (initReveal).
    Zonder JS (geen .js-class op <html>) blijft alles gewoon zichtbaar. */
-.js [data-reveal] { opacity: 0; transform: translateY(6px); }
-.js [data-reveal].revealed { animation: fade-up 0.32s cubic-bezier(0.2, 0, 0, 1) both; }
+.js [data-reveal] { opacity: 0; transform: translateY(var(--reveal-y)); }
+.js [data-reveal].revealed { animation: fade-up var(--dur-slow) var(--ease) both; }
 .grid [data-reveal]:nth-child(2) { animation-delay: 45ms; }
 .grid [data-reveal]:nth-child(3) { animation-delay: 90ms; }
 .grid [data-reveal]:nth-child(4) { animation-delay: 135ms; }
@@ -1052,28 +998,29 @@ input[type="file"][hidden] { display: none; }
 .act-list .act-row:nth-of-type(5) { animation-delay: 140ms; }
 .act-list .act-row:nth-of-type(n+6) { animation-delay: 175ms; }
 
-/* paginakop schuift zacht mee bij binnenkomst; de login-kaart doet dat ook
-   (losse pagina zonder .js-class, dus daar zonder poort) */
-.js .page-header { animation: fade-up 0.4s cubic-bezier(0.2, 0, 0, 1) both; }
-.login-kaart { animation: fade-up 0.4s cubic-bezier(0.2, 0, 0, 1) both; }
+/* paginakop en de mobiele merkrij schuiven zacht mee bij binnenkomst; de
+   login-kaart doet dat ook (losse pagina zonder .js-class, dus daar zonder
+   poort) */
+.js .page-header, .js .mob-brand { animation: fade-up var(--dur-slow) var(--ease) both; }
+.login-kaart { animation: fade-up 0.4s var(--ease) both; }
 
 /* invoervelden binnen een binnenkomende kaart infaden (o.a. Instellingen).
    Velden die pas later zichtbaar worden (bv. API-sleutel bij AI-aanbieder)
    faden op dat moment alsnog zacht in. */
-.js [data-reveal].revealed .form-grid .field { animation: fade-in 0.3s ease both; }
+.js [data-reveal].revealed .form-grid .field { animation: fade-in var(--dur-med) ease both; }
 .js [data-reveal].revealed .form-grid .field:nth-child(2) { animation-delay: 40ms; }
 .js [data-reveal].revealed .form-grid .field:nth-child(3) { animation-delay: 80ms; }
 .js [data-reveal].revealed .form-grid .field:nth-child(4) { animation-delay: 120ms; }
 .js [data-reveal].revealed .form-grid .field:nth-child(n+5) { animation-delay: 160ms; }
 
 /* 2FA-invoer verschijnt zacht zodra de rij wordt getoond */
-.js .mfa-row:not([hidden]) { animation: fade-up 0.25s cubic-bezier(0.2, 0, 0, 1); }
+.js .mfa-row:not([hidden]) { animation: fade-up var(--dur-med) var(--ease); }
 
 /* voortgangsbalk (readyheid, weekdoel) vloeit van 0 naar zijn waarde zodra de
    kaart in beeld komt; daarna regelt de bestaande width-transition updates */
 @keyframes grow-x { from { width: 0; } }
 .js [data-reveal].revealed .progress > span {
-  animation: grow-x 0.7s cubic-bezier(0.2, 0, 0, 1) 0.15s backwards;
+  animation: grow-x 0.6s var(--ease) 0.12s backwards;
 }
 
 /* navigatie-icoontje tilt zacht op bij hover */
@@ -1086,14 +1033,14 @@ input[type="file"][hidden] { display: none; }
 .act-row:active { background: var(--surface-container-high); }
 
 /* detailvenster: schaalend binnen, wegfadend bij sluiten */
-.modal[open] { animation: modal-in 0.24s cubic-bezier(0.2, 0, 0, 1); }
-.modal[open]::backdrop { animation: fade-in 0.24s ease; }
-.modal.closing { animation: modal-out 0.17s ease both; }
-.modal.closing::backdrop { animation: fade-out 0.17s ease both; }
+.modal[open] { animation: modal-in var(--dur-med) var(--ease); }
+.modal[open]::backdrop { animation: fade-in var(--dur-med) ease; }
+.modal.closing { animation: modal-out var(--dur-fast) ease both; }
+.modal.closing::backdrop { animation: fade-out var(--dur-fast) ease both; }
 
 /* adviespagina: accordeon-inhoud infaden, voortgangsbalk vloeit */
-.accordion[open] .acc-body { animation: fade-up 0.2s cubic-bezier(0.2, 0, 0, 1); }
-.progress > span { transition: width 0.6s cubic-bezier(0.2, 0, 0, 1); }
+.accordion[open] .acc-body { animation: fade-up var(--dur-med) var(--ease); }
+.progress > span { transition: width 0.6s var(--ease); }
 
 @media (prefers-reduced-motion: reduce) {
   .js [data-reveal] { opacity: 1; transform: none; }
@@ -1107,6 +1054,7 @@ input[type="file"][hidden] { display: none; }
   .act-row:hover .chev { transform: none; }
   .tip-day .chev { transition: none; }
   .js .page-header { animation: none; }
+  .js .mob-brand { animation: none; }
   .login-kaart { animation: none; }
   .js [data-reveal].revealed .form-grid .field { animation: none; }
   .js [data-reveal].revealed .progress > span { animation: none; }
@@ -1116,10 +1064,8 @@ input[type="file"][hidden] { display: none; }
   .nav-item:active .nav-icon { transform: none; }
   .snackbar, .snackbar.show { transition: none; }
   .login-fout { animation: none; }
-  .pin-scherm.pin-fout-schud { animation: none; }
   .js .spark polyline { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
   .js [data-reveal].revealed .spark circle { animation: none; }
-  .pin-dot, .pin-toets { transition: none; }
   .main.page-uit { transition: none; opacity: 1; transform: none; }
 }
 
@@ -1397,62 +1343,104 @@ input[type="file"][hidden] { display: none; }
   .schema-days { gap: var(--sp-1); }
 }
 
-/* -- telefoons (<=767px): zwevende pil-balk onderaan (M3 Expressive, zoals
-   Google Photos die in 2026 uitrolde): los van de schermranden zodat content
-   eronder en ernaast zichtbaar blijft, volledig rond, met een pil-markering
-   om het actieve item. Dit blok staat bewust laat in het bestand: het moet
-   de kleinere-schermen-regels hierboven (o.a. .page-padding) overschrijven,
+/* -- telefoons (<=767px): M3 Expressive "flexible navigation bar" onderaan:
+   de M3-anatomie (icoon + label, actieve 64x32-pill) in een losse, volledig
+   afgeronde balk — zoals de Expressive/Google-Photos-stijl die in 2026
+   uitrolde: los van de schermranden zodat content eronder zichtbaar blijft.
+   Dit blok staat bewust laat in het bestand: het moet de
+   kleinere-schermen-regels hierboven (o.a. .page-padding) overschrijven,
    anders verdwijnt de onderkant van pagina's achter de balk. -- */
 @media (max-width: 767px) {
-  :root { --bottomnav-h: 52px; }
+  :root { --bottomnav-h: 64px; }
   .drawer {
     top: auto;
-    bottom: calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
-    /* iets smaller dan de content (24px i.p.v. 16px zijkant) zodat de iconen
-       wat meer op elkaar zitten */
-    left: var(--sp-6);
-    right: var(--sp-6);
+    bottom: calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
+    /* zelfde zijkant als de content-kolom (16px), zodat de balk niet
+       breder is dan de content */
+    left: var(--sp-4);
+    right: var(--sp-4);
     width: auto;
     height: var(--bottomnav-h);
+    /* ~18px boven/onder en ~21px naast de iconen — met de pill-curve
+       meegenomen oogt dat gelijk */
     padding: var(--sp-1);
     flex-direction: row;
     align-items: stretch;
     border: none;
     border-radius: var(--radius-full);
-    /* subtiel: maar een hint merktint bovenop de witte/donkere basis —
-       duidelijk aanwezig zonder te schreeuwen; glass-blur blijft aan */
-    background: color-mix(in srgb, var(--secondary-container) 40%, var(--surface-container-lowest));
-    background: color-mix(in srgb, color-mix(in srgb, var(--secondary-container) 40%, var(--surface-container-lowest)) 88%, transparent);
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
+    /* net een stapje lichter dan de page-achtergrond, zodat de balk
+       loskomt zonder te schreeuwen */
+    background: var(--surface-container-high);
     box-shadow: var(--elev-2);
   }
-  @media (prefers-color-scheme: dark) {
-    .drawer {
-      background: color-mix(in srgb, var(--secondary-container) 40%, var(--surface-container));
-      background: color-mix(in srgb, color-mix(in srgb, var(--secondary-container) 40%, var(--surface-container)) 90%, transparent);
-    }
-  }
-  @media (min-width: 560px) {
-    .drawer { left: var(--sp-6); right: var(--sp-6); }
-  }
   .drawer-brand, .drawer-foot { display: none; }
-  .drawer-nav { flex-direction: row; gap: 0; width: 100%; align-items: center; }
-  /* alleen iconen: de labels blijven in de DOM (toegankelijke namen voor
+  /* compacte merkrij bovenin: logo + naam, zodat je in de (fullscreen) app
+     ziet waar je zit; zelfde breekpunt als de onderste navigatiebalk */
+  .mob-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 2px 2px var(--sp-3);
+    color: var(--on-surface);
+  }
+  .mob-brand svg { width: 26px; height: 26px; }
+  .mob-brand-text { display: flex; align-items: baseline; gap: var(--sp-2); line-height: 20px; }
+  .mob-brand-text b { font-size: var(--fs-16); font-weight: 600; }
+  .mob-brand-sub { font-size: var(--fs-12); color: var(--on-surface-variant); }
+  /* net iets meer beweging op mobiel dan de vorige stap: popups mogen
+     voelbaar binnenkomen, duren wel kort (consistent met de rest) */
+  :root { --reveal-y: 4px; --dur-slow: 0.24s; --dur-med: 0.18s; }
+  .modal[open] { animation: modal-in 0.22s var(--ease); }
+  .modal[open]::backdrop { animation: fade-in 0.22s ease; }
+  .js .spark polyline { animation-duration: 0.65s; animation-delay: 0.15s; }
+  .js [data-reveal].revealed .spark circle { animation-delay: 0.8s; }
+  .js [data-reveal].revealed .progress > span { animation-duration: 0.55s; }
+  .progress > span { transition-duration: 0.55s; }
+  .grid [data-reveal]:nth-child(2) { animation-delay: 25ms; }
+  .grid [data-reveal]:nth-child(3) { animation-delay: 50ms; }
+  .grid [data-reveal]:nth-child(4) { animation-delay: 75ms; }
+  .grid [data-reveal]:nth-child(n+5) { animation-delay: 90ms; }
+  .act-list .act-row:nth-of-type(2) { animation-delay: 18ms; }
+  .act-list .act-row:nth-of-type(3) { animation-delay: 36ms; }
+  .act-list .act-row:nth-of-type(4) { animation-delay: 54ms; }
+  .act-list .act-row:nth-of-type(5) { animation-delay: 72ms; }
+  .act-list .act-row:nth-of-type(n+6) { animation-delay: 90ms; }
+  .js [data-reveal].revealed .form-grid .field:nth-child(2) { animation-delay: 20ms; }
+  .js [data-reveal].revealed .form-grid .field:nth-child(3) { animation-delay: 40ms; }
+  .js [data-reveal].revealed .form-grid .field:nth-child(4) { animation-delay: 60ms; }
+  .js [data-reveal].revealed .form-grid .field:nth-child(n+5) { animation-delay: 80ms; }
+  /* bestemmingen: icoon-alleen in gelijk verdeelde slots — de Google-Photos-
+     expressive stijl. Labels blijven in de DOM (toegankelijke namen voor
      screenreaders) maar zijn visueel verborgen */
+  .drawer-nav { flex-direction: row; gap: 0; width: 100%; height: 100%; align-items: center; justify-content: center; }
   .nav-item {
     position: relative;
     flex: 1 1 0;
     min-width: 0;
-    height: 40px;
+    height: 100%;
     padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: var(--radius-full);
-    font-size: 10px;
-    line-height: 12px;
+    color: var(--on-surface-variant);
   }
-  /* iconen wat groter dan op de desktop-rail: zonder labels mogen ze het
-   voortouw nemen (svg-attributen worden door CSS-width/height overschreven) */
-  .nav-icon, .nav-icon svg { width: 28px; height: 28px; }
+  /* M3 active indicator: pill rond het icoon (secondary-container) */
+  .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    max-width: calc(100% - 2px);
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: transparent;
+    transition: background var(--dur-fast) var(--ease), transform 0.15s var(--ease);
+  }
+  .nav-icon svg { width: 28px; height: 28px; }
+  .nav-item.active { color: var(--on-secondary-container); }
+  .nav-item.active .nav-icon { background: var(--secondary-container); color: var(--on-secondary-container); }
+  /* labels: aanwezig voor screenreaders, visueel verborgen */
   .nav-label {
     position: absolute;
     width: 1px;
@@ -1464,14 +1452,10 @@ input[type="file"][hidden] { display: none; }
     clip: rect(0 0 0 0);
     white-space: nowrap;
   }
-  /* actieve bestemming: gevulde pil in de merkkleur — sterkst onderscheidend
-   (donker thema: tokens draaien automatisch mee naar lichtblauw op donker) */
-  .nav-item.active { background: var(--primary); color: var(--on-primary); margin-inline: 2px; }
-  /* speelse M3-Expressive tap: het icoon veert kort in bij het aanraken */
-  .nav-item .nav-icon { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  .nav-item:active .nav-icon { transform: scale(0.88); }
+  /* tap-feedback: kort en klein, geen bounce — Material 3 op mobiel */
+  .nav-item:active .nav-icon { transform: scale(0.92); }
   .main { margin-left: 0; }
-  .page { padding: var(--sp-4) var(--sp-4) calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--sp-8)); }
+  .page { padding: var(--sp-4) var(--sp-4) calc(var(--bottomnav-h) + env(safe-area-inset-bottom, 0px) + var(--sp-3) + var(--sp-8)); }
   /* onderaan elke pagina exact dezelfde ruimte: de page-padding is de enige
    bodemruimte — het laatste element (laatste kaart, sluitende hint) stapelt
    geen eigen marge meer op de padding. :not(dialog) want het verborgen
@@ -1611,7 +1595,7 @@ input[type="file"][hidden] { display: none; }
 .main.page-uit {
   opacity: 0;
   transform: translateY(-6px);
-  transition: opacity 0.14s ease, transform 0.14s ease;
+  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) ease;
 }
 
 /* -- datums: op telefoons numeriek (08-09-2026) i.p.v. maand voluit --
@@ -1642,3 +1626,20 @@ input[type="file"][hidden] { display: none; }
     white-space: nowrap;
   }
 }
+
+/* ---- vrij vraagveld bij het advies (consistent met de kaarten eronder) ---- */
+#vraag-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+#vraag-form .field { width: 100%; }
+.vraag-item {
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--outline-variant);
+}
+.vraag-item:first-child { border-top: none; padding-top: 0; }
+.vraag-q { color: var(--on-surface); }
+.vraag-a { white-space: pre-wrap; margin: var(--sp-2) 0 0; }
+.vraag-item .hint { margin: var(--sp-2) 0 0; }

@@ -184,7 +184,6 @@ function initDashboard() {
 /* ---------------- advies ---------------- */
 function initAdvice() {
   const aiBtn = $("#btn-advice-ai");
-  const rulesBtn = $("#btn-advice-rules");
   const status = $("#advice-status");
   const config = $("#ai-config");
   let running = false;
@@ -210,20 +209,16 @@ function initAdvice() {
     }
   }).catch(() => {});
 
-  async function run(mode, btn, busyLabel) {
+  async function run(btn, busyLabel) {
     if (running) { toast("Er loopt al een analyse — even geduld", false); return; }
     running = true;
     busy(btn, true, busyLabel);
-    const other = mode === "ai" ? rulesBtn : aiBtn;
-    other?.setAttribute("disabled", "");
-    if (status) status.textContent = mode === "ai"
-      ? "De AI analyseert je metingen, activiteiten en maaltijden — dit kan tot enkele minuten duren…"
-      : "De regelengine berekent je advies…";
+    if (status) status.textContent = "De AI analyseert je metingen, activiteiten en maaltijden — dit kan tot enkele minuten duren…";
     try {
       const r = await api("/api/advice/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode }),
+        body: JSON.stringify({ mode: "ai" }),
       });
       toast(`${r.source}: readyheid ${r.readiness}`);
       setTimeout(() => location.reload(), 1100);
@@ -231,13 +226,11 @@ function initAdvice() {
       toast(e.message, false);
       if (status) status.textContent = "";
       busy(btn, false);
-      other?.removeAttribute("disabled");
       running = false;
     }
   }
 
-  aiBtn?.addEventListener("click", () => run("ai", aiBtn, "Bezig met genereren…"));
-  rulesBtn?.addEventListener("click", () => run("rules", rulesBtn, "Berekenen..."));
+  aiBtn?.addEventListener("click", () => run(aiBtn, "Bezig met genereren…"));
 
   /* losse adviezen wissen (prullenbak in de kaartkop / accordionkop) */
   document.querySelectorAll(".del-advice").forEach((btn) => {
@@ -257,6 +250,69 @@ function initAdvice() {
         }
       } catch (err) { toast(err.message, false); }
     });
+  });
+
+  /* vrij vraagveld: losse vragen aan de AI over de eigen data */
+  const vraagForm = $("#vraag-form");
+  const vraagBtn = $("#btn-advice-vraag");
+  const vraagInvoer = $("#vraag-invoer");
+  const vraagStatus = $("#vraag-status");
+  const vraagUitvoer = $("#vraag-uitvoer");
+  const vragen = [];
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function renderVragen() {
+    if (!vraagUitvoer) return;
+    vraagUitvoer.innerHTML = "";
+    vragen.slice().reverse().forEach((v) => {
+      const blok = document.createElement("div");
+      blok.className = "vraag-item";
+      const q = document.createElement("p");
+      q.className = "vraag-q";
+      q.innerHTML = "<b>Jouw vraag:</b> " + escapeHtml(v.vraag);
+      const a = document.createElement("p");
+      a.className = "vraag-a";
+      a.textContent = v.antwoord;
+      const bron = document.createElement("p");
+      bron.className = "hint";
+      bron.textContent = v.bron || "";
+      blok.append(q, a, bron);
+      vraagUitvoer.append(blok);
+    });
+  }
+
+  vraagForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const tekst = (vraagInvoer.value || "").trim();
+    if (!tekst) { toast("Typ eerst een vraag", false); return; }
+    if (running) { toast("Er loopt al een analyse — even geduld", false); return; }
+    running = true;
+    busy(vraagBtn, true, "AI denkt na\u2026");
+    if (vraagStatus) {
+      vraagStatus.textContent = "De AI leest je recente data en beantwoordt je vraag — dit kan tot enkele minuten duren\u2026";
+    }
+    try {
+      const r = await api("/api/advice/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vraag: tekst }),
+      });
+      vragen.push({ vraag: tekst, antwoord: r.antwoord, bron: r.bron });
+      renderVragen();
+      vraagInvoer.value = "";
+      if (vraagStatus) vraagStatus.textContent = "";
+      toast("Vraag beantwoord");
+    } catch (err) {
+      toast(err.message, false);
+      if (vraagStatus) vraagStatus.textContent = "";
+    } finally {
+      busy(vraagBtn, false);
+      running = false;
+    }
   });
 }
 
@@ -771,7 +827,7 @@ function initSettings() {
   async function laadGebruikers() {
     if (!usersBox) return;
     try {
-      const lijst = await api("/api/gebruikers");
+      const lijst = await api("/api/users");
       usersBox.innerHTML = "";
       if (!lijst.length) {
         const p = document.createElement("p");
@@ -791,34 +847,7 @@ function initSettings() {
         const sub = document.createElement("div");
         sub.className = "list-sub";
         sub.textContent = g.created_at ? `account sinds ${datumNL(g.created_at)}` : "account";
-        if (g.pin_gezet) sub.textContent += " · PIN ingesteld";
         tekst.append(nm, sub);
-        const pinKnop = document.createElement("button");
-        pinKnop.type = "button";
-        pinKnop.className = "icon-btn";
-        pinKnop.setAttribute("aria-label", `Pincode instellen voor ${g.username}`);
-        pinKnop.title = "Pincode instellen (cijferblok op het inlogscherm)";
-        pinKnop.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
-        pinKnop.addEventListener("click", async () => {
-          const pin = prompt(`Pincode (4-8 cijfers) voor '${g.username}'. Leeg laten en OK = pincode wissen:`);
-          if (pin === null) return;
-          const p = pin.trim();
-          try {
-            if (!p) {
-              if (!confirm(`Pincode voor '${g.username}' wissen?`)) return;
-              await api(`/api/gebruikers/${g.id}/pin`, { method: "DELETE" });
-              toast("Pincode gewist");
-            } else {
-              await api(`/api/gebruikers/${g.id}/pin`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pin: p }),
-              });
-              toast("Pincode ingesteld");
-            }
-            laadGebruikers();
-          } catch (e) { toast(e.message, false); }
-        });
         const knop = document.createElement("button");
         knop.type = "button";
         knop.className = "icon-btn del-user";
@@ -828,12 +857,12 @@ function initSettings() {
         knop.addEventListener("click", async () => {
           if (!confirm(`Account '${g.username}' verwijderen?`)) return;
           try {
-            await api("/api/gebruikers/" + g.id, { method: "DELETE" });
+            await api("/api/users/" + g.id, { method: "DELETE" });
             toast("Account verwijderd");
             laadGebruikers();
           } catch (e) { toast(e.message, false); }
         });
-        rij.append(tekst, pinKnop, knop);
+        rij.append(tekst, knop);
         usersBox.append(rij);
       });
     } catch (e) {
@@ -852,7 +881,7 @@ function initSettings() {
     if (naam.length < 3) { toast("Gebruikersnaam: minimaal 3 tekens", false); return; }
     if (wacht.length < 4) { toast("Wachtwoord: minimaal 4 tekens", false); return; }
     try {
-      await api("/api/gebruikers", {
+      await api("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gebruiker: naam, wachtwoord: wacht }),
