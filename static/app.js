@@ -124,11 +124,18 @@ function sparkSvg(values, unit) {
     return [x.toFixed(1), y.toFixed(1)];
   });
   const lastPt = pts[pts.length - 1];
-  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img">
-    <polyline pathLength="1" points="${pts.map((p) => p.join(",")).join(" ")}" fill="none"
-      stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="3.5" fill="var(--tertiary)"/>
-  </svg>
+  /* svg wordt non-uniform geschaald (preserveAspectRatio="none"), dus een
+     <circle> zou een ellipse worden; het bolletje is daarom een HTML-dot op
+     percentage-positie — die blijft altijd perfect rond. vector-effect houdt
+     de lijndikte gelijk ondanks de horizontale uitrekking. */
+  return `<div class="spark-box">
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-hidden="true">
+      <polyline pathLength="1" points="${pts.map((p) => p.join(",")).join(" ")}" fill="none"
+        stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+        vector-effect="non-scaling-stroke"/>
+    </svg>
+    <span class="spark-dot" style="left:${(lastPt[0] / w) * 100}%;top:${(lastPt[1] / h) * 100}%"></span>
+  </div>
   <div class="spark-range"><span>${fmtNum(min)}</span><span>${fmtNum(max)} ${unit}</span></div>`;
 }
 
