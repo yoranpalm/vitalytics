@@ -123,18 +123,22 @@ function sparkSvg(values, unit) {
     const y = h - pad - ((v - min) / span) * (h - 2 * pad);
     return [x.toFixed(1), y.toFixed(1)];
   });
-  const lastPt = pts[pts.length - 1];
-  /* svg wordt non-uniform geschaald (preserveAspectRatio="none"), dus een
-     <circle> zou een ellipse worden; het bolletje is daarom een HTML-dot op
-     percentage-positie — die blijft altijd perfect rond. vector-effect houdt
-     de lijndikte gelijk ondanks de horizontale uitrekking. */
+  const punten = pts.map((p) => p.join(",")).join(" ");
+  /* svg wordt non-uniform geschaald (preserveAspectRatio="none"), dus het
+     bolletje is een tweede polyline met een miniem streepje (dasharray
+     "0.001 1"): dankzij ronde caps + non-scaling-stroke tekent dat als een
+     perfect rond punt, waar de lijn ook wordt uitgerekt. Zijn dashoffset
+     loopt 0 -> -0.999 tegelijk met de lijn (1 -> 0), met dezelfde easing:
+     het punt rijdt daarmee exact over de tekenpunt van de grafiek mee. */
   return `<div class="spark-box">
     <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-hidden="true">
-      <polyline pathLength="1" points="${pts.map((p) => p.join(",")).join(" ")}" fill="none"
+      <polyline class="lijn" pathLength="1" points="${punten}" fill="none"
         stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
         vector-effect="non-scaling-stroke"/>
+      <polyline class="punt" pathLength="1" points="${punten}" fill="none"
+        stroke="var(--tertiary)" stroke-width="7" stroke-linecap="round"
+        vector-effect="non-scaling-stroke"/>
     </svg>
-    <span class="spark-dot" style="left:${(lastPt[0] / w) * 100}%;top:${(lastPt[1] / h) * 100}%"></span>
   </div>
   <div class="spark-range"><span>${fmtNum(min)}</span><span>${fmtNum(max)} ${unit}</span></div>`;
 }
