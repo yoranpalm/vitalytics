@@ -127,9 +127,9 @@ function sparkSvg(values, unit) {
   /* svg wordt non-uniform geschaald (preserveAspectRatio="none"), dus het
      bolletje is een tweede polyline met een miniem streepje (dasharray
      "0.001 1"): dankzij ronde caps + non-scaling-stroke tekent dat als een
-     perfect rond punt, waar de lijn ook wordt uitgerekt. Zijn dashoffset
-     loopt 0 -> -0.999 tegelijk met de lijn (1 -> 0), met dezelfde easing:
-     het punt rijdt daarmee exact over de tekenpunt van de grafiek mee. */
+     perfect rond punt, waar de lijn ook wordt uitgerekt. De positie en het
+     infaden regelt style.css (.punt): het punt staat op het eindpunt en
+     fade pas in zodra de lijn klaar is. */
   return `<div class="spark-box">
     <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-hidden="true">
       <polyline class="lijn" pathLength="1" points="${punten}" fill="none"
