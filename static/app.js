@@ -137,7 +137,7 @@ function sparkSvg(values, unit) {
         vector-effect="non-scaling-stroke"/>
       <polyline class="punt" pathLength="1" points="${punten}" fill="none"
         stroke="var(--tertiary)" stroke-width="7" stroke-linecap="round"
-        vector-effect="non-scaling-stroke"/>
+        stroke-dasharray="0.001,1" vector-effect="non-scaling-stroke"/>
     </svg>
   </div>
   <div class="spark-range"><span>${fmtNum(min)}</span><span>${fmtNum(max)} ${unit}</span></div>`;
