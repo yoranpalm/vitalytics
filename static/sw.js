@@ -2,8 +2,8 @@
    Belangrijk: bij het aanpassen van style.css/app.js de CACHE bumpen én de
    query-params verhogen in base.html/login.html; CSS_V/JS_V hier gelijk
    houden aan die query-params, anders vindt de offline-fallback de URL niet. */
-const CACHE = "vitalytics-md3-v179";
-const CSS_V = "176";
+const CACHE = "vitalytics-md3-v180";
+const CSS_V = "177";
 const JS_V = "63";
 const SHELL = ["/", "/static/style.css?v=" + CSS_V, "/static/app.js?v=" + JS_V,
                "/manifest.webmanifest", "/static/icons/icon-192.png", "/favicon.ico"];

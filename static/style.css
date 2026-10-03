@@ -868,15 +868,15 @@ input[type="file"][hidden] { display: none; }
    infadet (opacity zit in de animatie, niet in de basisstijl). */
 .js .spark .punt { opacity: 0; stroke-dashoffset: -0.99; }
 .js [data-reveal].revealed .spark polyline.lijn {
-  animation: teken-in 0.8s cubic-bezier(0.2, 0, 0, 1) 0.2s forwards;
+  animation: teken-in 1.0s cubic-bezier(0.2, 0, 0, 1) 0.2s forwards;
 }
 /* het punt staat stil op het eindpunt en fade zacht in zodra de lijn klaar
-   is (lijn: 0.2 delay + 0.8 duur, daarna pas het punt). Dashoffset -0.99
+   is (lijn: 0.2 delay + 1.0 duur, daarna pas het punt). Dashoffset -0.99
    zet het miniem streepje 1% vór het pad-einde: precies op het einde laat
    de render-engine de dash vallen — daardoor verdween het bolletje voorheen
    zodra de rij-animatie bevroor. forwards houdt het punt zichtbaar. */
 .js [data-reveal].revealed .spark .punt {
-  animation: fade-in 0.3s ease 1s forwards;
+  animation: fade-in 0.3s ease 1.2s forwards;
 }
 @keyframes teken-in { to { stroke-dashoffset: 0; } }
 .spark-range {
@@ -1430,8 +1430,8 @@ input[type="file"][hidden] { display: none; }
   :root { --reveal-y: 8px; --dur-slow: 0.28s; --dur-med: 0.2s; }
   .modal[open] { animation: modal-in 0.26s var(--ease); }
   .modal[open]::backdrop { animation: fade-in 0.26s ease; }
-  .js [data-reveal].revealed .spark polyline.lijn { animation-duration: 0.75s; animation-delay: 0.15s; }
-  .js [data-reveal].revealed .spark .punt { animation-duration: 0.3s; animation-delay: 0.9s; }
+  .js [data-reveal].revealed .spark polyline.lijn { animation-duration: 0.9s; animation-delay: 0.15s; }
+  .js [data-reveal].revealed .spark .punt { animation-duration: 0.3s; animation-delay: 1.05s; }
   .js [data-reveal].revealed .progress > span { animation-duration: 0.65s; }
   .progress > span { transition-duration: 0.65s; }
   .grid [data-reveal]:nth-child(2) { animation-delay: 25ms; }
